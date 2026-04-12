@@ -1,0 +1,88 @@
+version: "3.9"
+
+services:
+  web-react:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./apps/web-react:/app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+
+  api-node:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./apps/api-node:/app
+    environment:
+      API_PORT: 4000
+      API_BODY_LIMIT: 50mb
+      JWT_ACCESS_SECRET: replace_me_access
+      JWT_REFRESH_SECRET: replace_me_refresh
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
+      TEST_INBOX: ${TEST_INBOX}
+      AI_SERVICE_URL: http://ai-python:8000
+      SCHEDULER_URL: http://scheduler-java:8081
+      ENCRYPTION_URL: http://encryption-java:8082
+      RECOMMENDATION_URL: http://recommendation-java:8083
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "4000:4000"
+
+  ai-python:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./services/ai-python:/app
+    command: sh -c "pip install -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+
+  scheduler-java:
+    image: maven:3.9.9-eclipse-temurin-21
+    working_dir: /app
+    volumes:
+      - ./services/scheduler-java:/app
+    command: mvn spring-boot:run
+    ports:
+      - "8081:8081"
+
+  encryption-java:
+    image: maven:3.9.9-eclipse-temurin-21
+    working_dir: /app
+    volumes:
+      - ./services/encryption-java:/app
+    command: mvn spring-boot:run
+    ports:
+      - "8082:8082"
+
+  recommendation-java:
+    image: maven:3.9.9-eclipse-temurin-21
+    working_dir: /app
+    volumes:
+      - ./services/recommendation-java:/app
+    command: mvn spring-boot:run
+    ports:
+      - "8083:8083"
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongo_data:

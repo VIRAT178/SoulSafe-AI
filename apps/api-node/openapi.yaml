@@ -1,0 +1,257 @@
+openapi: 3.1.0
+info:
+  title: SoulSafe API
+  version: 0.2.0
+servers:
+  - url: http://localhost:4000
+paths:
+  /health:
+    get:
+      summary: Service health
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+  /auth/register:
+    post:
+      summary: Register user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRequest"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+  /auth/login:
+    post:
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "200":
+          description: New access token
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken]
+                properties:
+                  accessToken:
+                    type: string
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+  /auth/logout:
+    post:
+      summary: Logout user
+      responses:
+        "204":
+          description: Logged out
+  /capsules:
+    get:
+      summary: List user capsules
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Capsule list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Capsule"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+    post:
+      summary: Create capsule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+      responses:
+        "201":
+          description: Capsule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Capsule"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+  /capsules/{id}/lock:
+    post:
+      summary: Lock capsule by date
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [unlockAt]
+              properties:
+                unlockAt:
+                  type: string
+      responses:
+        "200":
+          description: Capsule locked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Capsule"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+  /capsules/{id}/simulate-release:
+    post:
+      summary: Simulate scheduled release decision
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Capsule released
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Capsule"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    ErrorResponse:
+      description: Error payload
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+              reason:
+                type: string
+  schemas:
+    AuthRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+    AuthResponse:
+      type: object
+      required: [user, accessToken, refreshToken]
+      properties:
+        user:
+          type: object
+          required: [id, email]
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    Capsule:
+      type: object
+      required: [id, userId, title, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+        body:
+          type: [string, "null"]
+        status:
+          type: string
+          enum: [draft, locked, released]
+        unlockAt:
+          type: [string, "null"]
+        sentimentScore:
+          type: [number, "null"]
+        emotionLabels:
+          type: [array, "null"]
+          items:
+            type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
