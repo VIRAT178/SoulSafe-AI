@@ -81,8 +81,25 @@ type AppContextValue = {
   clearNotifications: () => void;
 };
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
 const AppContext = createContext<AppContextValue | null>(null);
+
+function resolveApiBaseUrl(): string {
+  const configuredApiBase = import.meta.env.VITE_API_BASE_URL;
+
+  if (configuredApiBase) {
+    return configuredApiBase;
+  }
+
+  if (import.meta.env.DEV) {
+    return "http://localhost:4000";
+  }
+
+  throw new Error(
+    "Missing VITE_API_BASE_URL. Set it in your production environment to your deployed API URL before building the web app."
+  );
+}
+
+const apiBase = resolveApiBaseUrl();
 
 function useAppContext(): AppContextValue {
   const context = useContext(AppContext);
