@@ -77,6 +77,7 @@ type AppContextValue = {
   lockCapsule: (capsuleId: string, unlockAt: string) => Promise<void>;
   simulateRelease: (capsuleId: string) => Promise<void>;
   unlockCapsuleWithKey: (capsuleId: string, unlockKey: string) => Promise<void>;
+  deleteCapsule: (capsuleId: string) => Promise<void>;
   deleteNotification: (notificationId: string) => void;
   clearNotifications: () => void;
 };
@@ -486,6 +487,25 @@ function App() {
     }
   }
 
+  async function deleteCapsule(capsuleId: string) {
+    if (!token) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await request<void>(`/capsules/${capsuleId}`, { method: "DELETE" }, token);
+      setCapsules((current) => current.filter((capsule) => capsule.id !== capsuleId));
+    } catch (deleteError) {
+      setError((deleteError as Error).message);
+      throw deleteError;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!token) {
       return;
@@ -518,6 +538,7 @@ function App() {
       lockCapsule,
       simulateRelease,
       unlockCapsuleWithKey,
+      deleteCapsule,
       deleteNotification,
       clearNotifications
     }),
@@ -1423,6 +1444,7 @@ function CapsuleServicePage() {
   const {
     capsules,
     createCapsule,
+    deleteCapsule,
     loading,
     error,
     clearError
@@ -1460,6 +1482,19 @@ function CapsuleServicePage() {
     setMediaName("");
     setUnlockAt(toLocalDateTimeValue(new Date(Date.now() + 24 * 60 * 60 * 1000)));
     setUnlockKey("");
+  }
+
+  async function onDeleteCapsule(capsuleId: string, capsuleTitle: string): Promise<void> {
+    if (!window.confirm(`Delete capsule \"${capsuleTitle}\"? This cannot be undone.`)) {
+      return;
+    }
+
+    clearError();
+    try {
+      await deleteCapsule(capsuleId);
+    } catch {
+      // Error shown from context.
+    }
   }
 
   return (
@@ -1511,7 +1546,7 @@ function CapsuleServicePage() {
               <th>Unlock</th>
               <th>AI</th>
               <th>Emotion</th>
-              <th>Details</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1524,9 +1559,19 @@ function CapsuleServicePage() {
                 <td>{typeof capsule.sentimentScore === "number" ? capsule.sentimentScore.toFixed(2) : "Pending"}</td>
                 <td>{capsule.emotionLabels?.length ? capsule.emotionLabels.join(", ") : "Pending"}</td>
                 <td>
-                  <Link to={`/dashboard/services/capsules/${capsule.id}`} className="btn btn-primary capsule-detail-link">
-                    View
-                  </Link>
+                  <div className="capsule-row-actions">
+                    <Link to={`/dashboard/services/capsules/${capsule.id}`} className="btn btn-primary capsule-detail-link">
+                      View
+                    </Link>
+                    <button
+                      type="button"
+                      className="inline-btn"
+                      onClick={() => onDeleteCapsule(capsule.id, capsule.title)}
+                      disabled={loading}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1539,7 +1584,8 @@ function CapsuleServicePage() {
 
 function CapsuleDetailPage() {
   const { capsuleId } = useParams<{ capsuleId: string }>();
-  const { capsules, unlockCapsuleWithKey, loading, error, clearError } = useAppContext();
+  const navigate = useNavigate();
+  const { capsules, unlockCapsuleWithKey, deleteCapsule, loading, error, clearError } = useAppContext();
   const [unlockKey, setUnlockKey] = useState("");
   const [unlockSuccess, setUnlockSuccess] = useState(false);
   const capsule = capsules.find((item) => item.id === capsuleId);
@@ -1557,6 +1603,24 @@ function CapsuleDetailPage() {
       await unlockCapsuleWithKey(capsule.id, unlockKey);
       setUnlockKey("");
       setUnlockSuccess(true);
+    } catch {
+      // Error shown from context.
+    }
+  }
+
+  async function onDeleteCapsule(): Promise<void> {
+    if (!capsule) {
+      return;
+    }
+
+    if (!window.confirm(`Delete capsule \"${capsule.title}\"? This cannot be undone.`)) {
+      return;
+    }
+
+    clearError();
+    try {
+      await deleteCapsule(capsule.id);
+      navigate("/dashboard/services/capsules", { replace: true });
     } catch {
       // Error shown from context.
     }
@@ -1585,7 +1649,12 @@ function CapsuleDetailPage() {
           <h3>{capsule.title}</h3>
           <p>Complete capsule details and AI analysis summary.</p>
         </div>
-        <Link to="/dashboard/services/capsules" className="btn btn-primary capsule-detail-back">Back to Capsule Service</Link>
+        <div className="capsule-detail-actions">
+          <button type="button" className="inline-btn" onClick={onDeleteCapsule} disabled={loading}>
+            Delete Capsule
+          </button>
+          <Link to="/dashboard/services/capsules" className="btn btn-primary capsule-detail-back">Back to Capsule Service</Link>
+        </div>
       </div>
 
       <div className="capsule-detail-grid">

@@ -306,3 +306,15 @@ export async function attachAiSignals(capsuleId: string, sentimentScore: number,
     }
   );
 }
+
+export async function deleteCapsule(capsuleId: string, userId: string): Promise<boolean> {
+  try {
+    const result = await capsulesCollection().deleteOne({
+      _id: new ObjectId(capsuleId),
+      userId
+    });
+    return result.deletedCount === 1;
+  } catch {
+    return false;
+  }
+}

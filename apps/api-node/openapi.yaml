@@ -132,6 +132,45 @@ paths:
                 $ref: "#/components/schemas/Capsule"
         "401":
           $ref: "#/components/responses/ErrorResponse"
+  /capsules/{id}:
+    get:
+      summary: Get one capsule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Capsule details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Capsule"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+    delete:
+      summary: Delete one capsule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Capsule deleted
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
   /capsules/{id}/lock:
     post:
       summary: Lock capsule by date

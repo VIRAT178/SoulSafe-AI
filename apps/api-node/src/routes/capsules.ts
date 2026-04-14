@@ -3,6 +3,7 @@ import { decryptCapsulePayload, encryptCapsulePayload } from "../services/client
 import { simulateUnlock } from "../services/clients/schedulerClient.js";
 import {
   createCapsule,
+  deleteCapsule,
   getCapsuleById,
   listCapsules,
   lockCapsule,
@@ -53,6 +54,49 @@ async function toCapsuleResponse(capsule: {
     createdAt: capsule.createdAt,
     updatedAt: capsule.updatedAt
   };
+}
+
+function isCapsuleOverdue(capsule: {
+  status: "draft" | "locked" | "released";
+  unlockAt?: string;
+}): boolean {
+  if (capsule.status !== "locked" || !capsule.unlockAt) {
+    return false;
+  }
+
+  const unlockAtMs = Date.parse(capsule.unlockAt);
+  return !Number.isNaN(unlockAtMs) && unlockAtMs <= Date.now();
+}
+
+async function refreshOverdueCapsuleState(capsule: {
+  id: string;
+  userId: string;
+  title: string;
+  encryptedPayload: string;
+  mediaUrl?: string;
+  status: "draft" | "locked" | "released";
+  unlockAt?: string;
+  sentimentScore?: number;
+  emotionLabels?: string[];
+  createdAt: string;
+  updatedAt: string;
+}) {
+  if (!isCapsuleOverdue(capsule)) {
+    return capsule;
+  }
+
+  await processUnlockDecision(capsule.id);
+  const refreshed = await getCapsuleById(capsule.id);
+  return refreshed || capsule;
+}
+
+async function getOwnedCapsule(capsuleId: string, userId: string) {
+  const capsule = await getCapsuleById(capsuleId);
+  if (!capsule || capsule.userId !== userId) {
+    return null;
+  }
+
+  return capsule;
 }
 
 router.post("/", async (req, res) => {
@@ -109,7 +153,13 @@ router.post("/:id/unlock-with-key", async (req, res) => {
   }
 
   try {
-    const released = await unlockCapsuleWithKey(req.params.id, String(unlockKey));
+    const userId = getUserIdFromAuthHeader(req.headers.authorization);
+    const capsule = await getOwnedCapsule(req.params.id, userId);
+    if (!capsule) {
+      return res.status(404).json({ error: "Capsule not found" });
+    }
+
+    const released = await unlockCapsuleWithKey(capsule.id, String(unlockKey));
     if (!released) {
       return res.status(404).json({ error: "Capsule not found" });
     }
@@ -124,7 +174,8 @@ router.get("/", async (req, res) => {
   try {
     const userId = getUserIdFromAuthHeader(req.headers.authorization);
     const capsules = await listCapsules(userId);
-    const response = await Promise.all(capsules.map((capsule) => toCapsuleResponse(capsule)));
+    const normalized = await Promise.all(capsules.map((capsule) => refreshOverdueCapsuleState(capsule)));
+    const response = await Promise.all(normalized.map((capsule) => toCapsuleResponse(capsule)));
     return res.json(response);
   } catch (error) {
     return res.status(401).json({ error: (error as Error).message });
@@ -133,19 +184,27 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
-    const capsule = await getCapsuleById(req.params.id);
+    const userId = getUserIdFromAuthHeader(req.headers.authorization);
+    const capsule = await getOwnedCapsule(req.params.id, userId);
     if (!capsule) {
       return res.status(404).json({ error: "Capsule not found" });
     }
 
-    return res.json(await toCapsuleResponse(capsule));
-  } catch {
-    return res.status(400).json({ error: "Invalid capsule id" });
+    const normalized = await refreshOverdueCapsuleState(capsule);
+    return res.json(await toCapsuleResponse(normalized));
+  } catch (error) {
+    return res.status(401).json({ error: (error as Error).message });
   }
 });
 
 router.patch("/:id", async (req, res) => {
   try {
+    const userId = getUserIdFromAuthHeader(req.headers.authorization);
+    const capsule = await getOwnedCapsule(req.params.id, userId);
+    if (!capsule) {
+      return res.status(404).json({ error: "Capsule not found" });
+    }
+
     const updates: { title?: string; encryptedPayload?: string; encryptionMethod?: string } = {};
     if (req.body.title) {
       updates.title = req.body.title;
@@ -156,14 +215,14 @@ router.patch("/:id", async (req, res) => {
       updates.encryptionMethod = encrypted.method;
     }
 
-    const updated = await updateCapsule(req.params.id, updates);
+    const updated = await updateCapsule(capsule.id, updates);
     if (!updated) {
       return res.status(404).json({ error: "Capsule not found" });
     }
 
     return res.json(await toCapsuleResponse(updated));
   } catch (error) {
-    return res.status(404).json({ error: (error as Error).message });
+    return res.status(401).json({ error: (error as Error).message });
   }
 });
 
@@ -174,7 +233,13 @@ router.post("/:id/lock", async (req, res) => {
   }
 
   try {
-    const locked = await lockCapsule(req.params.id, unlockAt);
+    const userId = getUserIdFromAuthHeader(req.headers.authorization);
+    const capsule = await getOwnedCapsule(req.params.id, userId);
+    if (!capsule) {
+      return res.status(404).json({ error: "Capsule not found" });
+    }
+
+    const locked = await lockCapsule(capsule.id, unlockAt);
     if (!locked) {
       return res.status(404).json({ error: "Capsule not found" });
     }
@@ -189,7 +254,13 @@ router.post("/:id/lock", async (req, res) => {
 
 router.post("/:id/release", async (req, res) => {
   try {
-    const result = await processUnlockDecision(req.params.id);
+    const userId = getUserIdFromAuthHeader(req.headers.authorization);
+    const capsule = await getOwnedCapsule(req.params.id, userId);
+    if (!capsule) {
+      return res.status(404).json({ error: "Capsule not found" });
+    }
+
+    const result = await processUnlockDecision(capsule.id);
     if (result.reason === "capsule-not-found") {
       return res.status(404).json({ error: "Capsule not found" });
     }
@@ -201,7 +272,7 @@ router.post("/:id/release", async (req, res) => {
       });
     }
 
-    const released = await getCapsuleById(req.params.id);
+    const released = await getCapsuleById(capsule.id);
     if (!released) {
       return res.status(404).json({ error: "Capsule not found" });
     }
@@ -214,8 +285,14 @@ router.post("/:id/release", async (req, res) => {
 
 router.post("/:id/simulate-release", async (req, res) => {
   try {
-    await simulateUnlock(req.params.id);
-    const result = await processUnlockDecision(req.params.id);
+    const userId = getUserIdFromAuthHeader(req.headers.authorization);
+    const capsule = await getOwnedCapsule(req.params.id, userId);
+    if (!capsule) {
+      return res.status(404).json({ error: "Capsule not found" });
+    }
+
+    await simulateUnlock(capsule.id);
+    const result = await processUnlockDecision(capsule.id);
     if (result.reason === "capsule-not-found") {
       return res.status(404).json({ error: "Capsule not found" });
     }
@@ -224,7 +301,7 @@ router.post("/:id/simulate-release", async (req, res) => {
       return res.status(409).json({ error: "Unlock delayed by AI policy", reason: result.reason });
     }
 
-    const released = await getCapsuleById(req.params.id);
+    const released = await getCapsuleById(capsule.id);
     if (!released) {
       return res.status(404).json({ error: "Capsule not found" });
     }
@@ -232,6 +309,21 @@ router.post("/:id/simulate-release", async (req, res) => {
     return res.json(await toCapsuleResponse(released));
   } catch (error) {
     return res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const userId = getUserIdFromAuthHeader(req.headers.authorization);
+    const removed = await deleteCapsule(req.params.id, userId);
+
+    if (!removed) {
+      return res.status(404).json({ error: "Capsule not found" });
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    return res.status(401).json({ error: (error as Error).message });
   }
 });
 
