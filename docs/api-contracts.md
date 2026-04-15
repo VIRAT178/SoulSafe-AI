@@ -15,8 +15,27 @@
 - POST /capsules/:id/release
 - POST /capsules/:id/simulate-release
 
+### Capsule Event Trigger Fields
+- unlockEventRules.type: birthday | exam | breakup | custom
+- unlockEventRules.date: optional ISO datetime
+- unlockEventRules.metadata.personName: optional
+- unlockEventRules.metadata.eventName: optional
+
+### Capsule Detail Explainability
+- GET /capsules/:id now includes:
+	- capsule: full capsule payload
+	- unlockReason: string | null
+	- Backward compatibility: existing top-level capsule fields are still returned.
+
 ## AI
 - POST /ai/analyze
+- GET /ai/timeline/:userId
+
+### AI Timeline Response
+- date: ISO datetime
+- sentimentScore: number
+- emotion: dominant emotion
+- capsuleTitle: capsule title used in timeline tooltip
 
 ## Service Health
 - GET /health (api-node, ai-python)

@@ -5,6 +5,7 @@ import request from "supertest";
 import SwaggerParser from "@apidevtools/swagger-parser";
 import YAML from "yaml";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { issueAccessToken } from "../../src/services/tokens.js";
 
 vi.mock("../../src/services/repository.js", () => {
   const capsules = [

@@ -123,6 +123,11 @@ paths:
                   type: string
                 body:
                   type: string
+                unlockAt:
+                  type: string
+                  format: date-time
+                unlockEventRules:
+                  $ref: "#/components/schemas/UnlockEventRule"
       responses:
         "201":
           description: Capsule created
@@ -149,7 +154,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Capsule"
+                $ref: "#/components/schemas/CapsuleDetailResponse"
         "401":
           $ref: "#/components/responses/ErrorResponse"
         "404":
@@ -221,6 +226,30 @@ paths:
                 $ref: "#/components/schemas/Capsule"
         "409":
           $ref: "#/components/responses/ErrorResponse"
+  /ai/timeline/{userId}:
+    get:
+      summary: User emotion timeline
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Emotion timeline points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmotionTimelinePoint"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
 components:
   securitySchemes:
     bearerAuth:
@@ -284,13 +313,59 @@ components:
           enum: [draft, locked, released]
         unlockAt:
           type: [string, "null"]
+        unlockEventRules:
+          oneOf:
+            - $ref: "#/components/schemas/UnlockEventRule"
+            - type: "null"
         sentimentScore:
           type: [number, "null"]
+        dominantEmotion:
+          type: [string, "null"]
         emotionLabels:
           type: [array, "null"]
           items:
             type: string
+        analyzedAt:
+          type: [string, "null"]
         createdAt:
           type: string
         updatedAt:
+          type: string
+    UnlockEventRule:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [birthday, exam, breakup, custom]
+        date:
+          type: [string, "null"]
+        metadata:
+          type: [object, "null"]
+          properties:
+            personName:
+              type: [string, "null"]
+            eventName:
+              type: [string, "null"]
+    CapsuleDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/Capsule"
+        - type: object
+          required: [capsule]
+          properties:
+            capsule:
+              $ref: "#/components/schemas/Capsule"
+            unlockReason:
+              type: [string, "null"]
+    EmotionTimelinePoint:
+      type: object
+      required: [date, sentimentScore, emotion, capsuleTitle]
+      properties:
+        date:
+          type: string
+        sentimentScore:
+          type: number
+        emotion:
+          type: string
+        capsuleTitle:
           type: string

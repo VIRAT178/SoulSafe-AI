@@ -264,3 +264,24 @@ Phase 5: Intelligence Upgrade
 
 
 This gives a working product loop early, before full AI complexity.
+
+---
+
+## Implementation Addendum (April 2026)
+
+### 1) Event-Based Triggers
+- Capsule schema supports unlockEventRules with type/date/metadata.
+- API create/list/detail supports event rule payloads.
+- Scheduler service evaluates event rules with idempotent event keys.
+- Unlock worker merges Redis date queue with event-trigger queue.
+
+### 2) Emotion Timeline Visualization
+- AI responses include dominantEmotion, analyzedAt, and emotionSimilarityScore.
+- Analysis metadata is persisted in ai_analyses for timeline queries.
+- API endpoint GET /ai/timeline/:userId returns date, sentimentScore, emotion, and capsuleTitle.
+- Frontend AI page renders timeline chart in the "Your Emotional Journey" section.
+
+### 3) AI Explainability
+- Recommendation service returns decisionReason with trigger-aware policy.
+- API stores explainability in unlock_events with triggerType and processedAt.
+- Capsule detail includes unlockReason and preserves backward-compatible capsule fields.

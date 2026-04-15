@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import aiRoutes from "./routes/ai.js";
 import authRoutes from "./routes/auth.js";
 import capsuleRoutes from "./routes/capsules.js";
 
@@ -16,6 +17,7 @@ export function createApp() {
   });
 
   app.use("/auth", authRoutes);
+  app.use("/ai", aiRoutes);
   app.use("/capsules", capsuleRoutes);
 
   app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {

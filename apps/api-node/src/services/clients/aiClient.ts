@@ -7,6 +7,8 @@ type AnalyzeResponse = {
   recommendationHints?: string[];
   sentimentTrendScore?: number;
   dominantEmotion?: string;
+  analyzedAt?: string;
+  emotionSimilarityScore?: number;
   transcriptDetected?: boolean;
   recommendationSummary?: string | null;
 };

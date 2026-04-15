@@ -25,7 +25,15 @@ export function startAiWorker(): void {
         return;
       }
 
-      await attachAiSignals(capsuleId, analysis.sentimentScore, analysis.emotionLabels);
+      await attachAiSignals(
+        capsuleId,
+        analysis.sentimentScore,
+        analysis.dominantEmotion || analysis.emotionLabels[0] || "neutral",
+        analysis.emotionLabels,
+        analysis.contextTags || [],
+        analysis.analyzedAt || new Date().toISOString(),
+        analysis.emotionSimilarityScore ?? 0
+      );
 
       const owner = await findUserById(capsule.userId);
       if (owner) {

@@ -4,13 +4,16 @@ import { simulateUnlock } from "../services/clients/schedulerClient.js";
 import {
   createCapsule,
   deleteCapsule,
+  getLatestUnlockReason,
   getCapsuleById,
   listCapsules,
   lockCapsule,
+  recordUnlockEvent,
+  type UnlockEventRule,
   unlockCapsuleWithKey,
   updateCapsule
 } from "../services/repository.js";
-import { enqueueAiAnalysis, scheduleUnlock } from "../services/queue.js";
+import { enqueueAiAnalysis, registerEventTriggerCapsule, scheduleUnlock } from "../services/queue.js";
 import { sendCapsuleCreatedEmail } from "../services/mailer.js";
 import { findUserById } from "../services/repository.js";
 import { verifyAccessToken } from "../services/tokens.js";
@@ -27,6 +30,39 @@ function getUserIdFromAuthHeader(authorization?: string): string {
   return verifyAccessToken(token);
 }
 
+function parseUnlockEventRule(value: unknown): UnlockEventRule | undefined {
+  if (!value || typeof value !== "object") {
+    return undefined;
+  }
+
+  const candidate = value as {
+    type?: string;
+    date?: string;
+    metadata?: { personName?: string; eventName?: string };
+  };
+
+  if (!candidate.type || !["birthday", "exam", "breakup", "custom"].includes(candidate.type)) {
+    throw new Error("Invalid unlockEventRules.type");
+  }
+
+  const parsed: UnlockEventRule = {
+    type: candidate.type as UnlockEventRule["type"]
+  };
+
+  if (typeof candidate.date === "string" && candidate.date) {
+    parsed.date = candidate.date;
+  }
+
+  if (candidate.metadata && typeof candidate.metadata === "object") {
+    parsed.metadata = {
+      personName: typeof candidate.metadata.personName === "string" ? candidate.metadata.personName : undefined,
+      eventName: typeof candidate.metadata.eventName === "string" ? candidate.metadata.eventName : undefined
+    };
+  }
+
+  return parsed;
+}
+
 async function toCapsuleResponse(capsule: {
   id: string;
   userId: string;
@@ -35,8 +71,11 @@ async function toCapsuleResponse(capsule: {
     mediaUrl?: string;
   status: "draft" | "locked" | "released";
   unlockAt?: string;
+  unlockEventRules?: UnlockEventRule;
   sentimentScore?: number;
+  dominantEmotion?: string;
   emotionLabels?: string[];
+  analyzedAt?: string;
   createdAt: string;
   updatedAt: string;
 }) {
@@ -49,8 +88,11 @@ async function toCapsuleResponse(capsule: {
     mediaUrl: capsule.mediaUrl,
     status: capsule.status,
     unlockAt: capsule.unlockAt,
+    unlockEventRules: capsule.unlockEventRules,
     sentimentScore: capsule.sentimentScore,
+    dominantEmotion: capsule.dominantEmotion,
     emotionLabels: capsule.emotionLabels,
+    analyzedAt: capsule.analyzedAt,
     createdAt: capsule.createdAt,
     updatedAt: capsule.updatedAt
   };
@@ -76,8 +118,11 @@ async function refreshOverdueCapsuleState(capsule: {
   mediaUrl?: string;
   status: "draft" | "locked" | "released";
   unlockAt?: string;
+  unlockEventRules?: UnlockEventRule;
   sentimentScore?: number;
+  dominantEmotion?: string;
   emotionLabels?: string[];
+  analyzedAt?: string;
   createdAt: string;
   updatedAt: string;
 }) {
@@ -103,6 +148,7 @@ router.post("/", async (req, res) => {
   try {
     const userId = getUserIdFromAuthHeader(req.headers.authorization);
     const { title, body, mediaUrl, unlockAt, unlockKey } = req.body;
+    const unlockEventRules = parseUnlockEventRule(req.body.unlockEventRules);
     if (!title || !body) {
       return res.status(400).json({ error: "title and body are required" });
     }
@@ -115,6 +161,7 @@ router.post("/", async (req, res) => {
       encryptionMethod: encrypted.method,
       mediaUrl: typeof mediaUrl === "string" ? mediaUrl : undefined,
       unlockAt: typeof unlockAt === "string" ? unlockAt : undefined,
+      unlockEventRules,
       unlockKeyHash: typeof unlockKey === "string" && unlockKey ? hashPassword(unlockKey) : undefined
     });
 
@@ -122,6 +169,10 @@ router.post("/", async (req, res) => {
 
     if (typeof unlockAt === "string" && unlockAt) {
       await scheduleUnlock(capsule.id, unlockAt);
+    }
+
+    if (unlockEventRules) {
+      await registerEventTriggerCapsule(capsule.id);
     }
 
     const created = await getCapsuleById(capsule.id);
@@ -164,6 +215,14 @@ router.post("/:id/unlock-with-key", async (req, res) => {
       return res.status(404).json({ error: "Capsule not found" });
     }
 
+    await recordUnlockEvent({
+      capsuleId: released.id,
+      userId: released.userId,
+      triggerType: "manual",
+      decisionReason: "Opened early using your capsule encryption key",
+      processedAt: new Date().toISOString()
+    });
+
     return res.json(await toCapsuleResponse(released));
   } catch (error) {
     return res.status(400).json({ error: (error as Error).message });
@@ -191,7 +250,14 @@ router.get("/:id", async (req, res) => {
     }
 
     const normalized = await refreshOverdueCapsuleState(capsule);
-    return res.json(await toCapsuleResponse(normalized));
+    const payload = await toCapsuleResponse(normalized);
+    const unlockReason = await getLatestUnlockReason(normalized.id);
+
+    return res.json({
+      ...payload,
+      capsule: payload,
+      unlockReason
+    });
   } catch (error) {
     return res.status(401).json({ error: (error as Error).message });
   }
@@ -260,7 +326,7 @@ router.post("/:id/release", async (req, res) => {
       return res.status(404).json({ error: "Capsule not found" });
     }
 
-    const result = await processUnlockDecision(capsule.id);
+    const result = await processUnlockDecision(capsule.id, { triggerType: "manual" });
     if (result.reason === "capsule-not-found") {
       return res.status(404).json({ error: "Capsule not found" });
     }
@@ -292,7 +358,7 @@ router.post("/:id/simulate-release", async (req, res) => {
     }
 
     await simulateUnlock(capsule.id);
-    const result = await processUnlockDecision(capsule.id);
+    const result = await processUnlockDecision(capsule.id, { triggerType: "date" });
     if (result.reason === "capsule-not-found") {
       return res.status(404).json({ error: "Capsule not found" });
     }

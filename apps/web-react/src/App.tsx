@@ -1,5 +1,15 @@
 import { FormEvent, type ChangeEvent, createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import EmotionTimeline, { type EmotionTimelinePoint } from "./components/EmotionTimeline";
+
+type UnlockEventRule = {
+  type: "birthday" | "exam" | "breakup" | "custom";
+  date?: string;
+  metadata?: {
+    personName?: string;
+    eventName?: string;
+  };
+};
 
 type Capsule = {
   id: string;
@@ -8,7 +18,10 @@ type Capsule = {
   createdAt: string;
   mediaUrl?: string;
   unlockAt?: string;
+  unlockEventRules?: UnlockEventRule;
   status: "draft" | "locked" | "released";
+  dominantEmotion?: string;
+  analyzedAt?: string;
   emotionLabels?: string[];
   sentimentScore?: number;
 };
@@ -73,6 +86,7 @@ type AppContextValue = {
     mediaUrl?: string;
     unlockAt?: string;
     unlockKey: string;
+    unlockEventRules?: UnlockEventRule;
   }) => Promise<void>;
   lockCapsule: (capsuleId: string, unlockAt: string) => Promise<void>;
   simulateRelease: (capsuleId: string) => Promise<void>;
@@ -153,6 +167,11 @@ function readFileAsDataUrl(file: File): Promise<string> {
 function toLocalDateTimeValue(date: Date): string {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function heightClass(percent: number): string {
+  const clamped = Math.max(10, Math.min(100, Math.round(percent / 10) * 10));
+  return `h-${clamped}`;
 }
 
 function App() {
@@ -376,6 +395,7 @@ function App() {
     mediaUrl?: string;
     unlockAt?: string;
     unlockKey: string;
+    unlockEventRules?: UnlockEventRule;
   }) {
     if (!token) {
       return;
@@ -1413,7 +1433,7 @@ function DashboardHomePage() {
               {activitySeries.bars.map((bar) => (
                 <div key={bar.range} className="activity-chart-bar" title={`${bar.range}: ${bar.count} capsule${bar.count === 1 ? "" : "s"}`}>
                   <div className="activity-chart-track">
-                    <div className="activity-chart-fill" style={{ height: `${bar.height}%` }} />
+                    <div className={`activity-chart-fill ${heightClass(bar.height)}`} />
                   </div>
                   <span className="activity-chart-count">{bar.count}</span>
                   <span className="activity-chart-label">{bar.label}</span>
@@ -1453,7 +1473,12 @@ function CapsuleServicePage() {
   const [body, setBody] = useState("I hope you stayed brave.");
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaName, setMediaName] = useState("");
+  const [unlockMode, setUnlockMode] = useState<"date" | "event">("date");
   const [unlockAt, setUnlockAt] = useState(() => toLocalDateTimeValue(new Date(Date.now() + 24 * 60 * 60 * 1000)));
+  const [eventType, setEventType] = useState<UnlockEventRule["type"]>("birthday");
+  const [eventDate, setEventDate] = useState(() => toLocalDateTimeValue(new Date(Date.now() + 24 * 60 * 60 * 1000)));
+  const [eventName, setEventName] = useState("");
+  const [personName, setPersonName] = useState("");
   const [unlockKey, setUnlockKey] = useState("");
 
   async function onPickMedia(event: ChangeEvent<HTMLInputElement>) {
@@ -1470,17 +1495,33 @@ function CapsuleServicePage() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearError();
+
+    const eventRule = unlockMode === "event"
+      ? {
+          type: eventType,
+          date: eventDate ? new Date(eventDate).toISOString() : undefined,
+          metadata: {
+            eventName: eventName || undefined,
+            personName: personName || undefined
+          }
+        }
+      : undefined;
+
     await createCapsule({
       title,
       body,
       mediaUrl: mediaUrl || undefined,
-      unlockAt: unlockAt || undefined,
+      unlockAt: unlockMode === "date" ? (unlockAt ? new Date(unlockAt).toISOString() : undefined) : undefined,
+      unlockEventRules: eventRule,
       unlockKey
     });
     setBody("");
     setMediaUrl("");
     setMediaName("");
     setUnlockAt(toLocalDateTimeValue(new Date(Date.now() + 24 * 60 * 60 * 1000)));
+    setEventDate(toLocalDateTimeValue(new Date(Date.now() + 24 * 60 * 60 * 1000)));
+    setEventName("");
+    setPersonName("");
     setUnlockKey("");
   }
 
@@ -1509,8 +1550,58 @@ function CapsuleServicePage() {
             <input value={title} onChange={(event) => setTitle(event.target.value)} required />
           </label>
           <label>
+            Unlock mode
+            <select value={unlockMode} onChange={(event) => setUnlockMode(event.target.value as "date" | "event")}>
+              <option value="date">Date-based</option>
+              <option value="event">Event-based</option>
+            </select>
+          </label>
+          <label>
             Unlock day and time
-            <input type="datetime-local" value={unlockAt} onChange={(event) => setUnlockAt(event.target.value)} required />
+            <input
+              type="datetime-local"
+              value={unlockAt}
+              onChange={(event) => setUnlockAt(event.target.value)}
+              required={unlockMode === "date"}
+              disabled={unlockMode !== "date"}
+            />
+          </label>
+          <label>
+            Event type
+            <select value={eventType} onChange={(event) => setEventType(event.target.value as UnlockEventRule["type"])} disabled={unlockMode !== "event"}>
+              <option value="birthday">Birthday</option>
+              <option value="exam">Exam</option>
+              <option value="breakup">Breakup</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <label>
+            Event date
+            <input
+              type="datetime-local"
+              value={eventDate}
+              onChange={(event) => setEventDate(event.target.value)}
+              required={unlockMode === "event"}
+              disabled={unlockMode !== "event"}
+            />
+          </label>
+          <label>
+            Event name
+            <input
+              value={eventName}
+              onChange={(event) => setEventName(event.target.value)}
+              placeholder="e.g. Final Exam or Her Birthday"
+              disabled={unlockMode !== "event"}
+            />
+          </label>
+          <label>
+            Person name
+            <input
+              value={personName}
+              onChange={(event) => setPersonName(event.target.value)}
+              placeholder="Optional"
+              disabled={unlockMode !== "event"}
+            />
           </label>
           <label>
             Media
@@ -1585,10 +1676,26 @@ function CapsuleServicePage() {
 function CapsuleDetailPage() {
   const { capsuleId } = useParams<{ capsuleId: string }>();
   const navigate = useNavigate();
-  const { capsules, unlockCapsuleWithKey, deleteCapsule, loading, error, clearError } = useAppContext();
+  const { capsules, token, unlockCapsuleWithKey, deleteCapsule, loading, error, clearError } = useAppContext();
   const [unlockKey, setUnlockKey] = useState("");
   const [unlockSuccess, setUnlockSuccess] = useState(false);
+  const [unlockReason, setUnlockReason] = useState<string | null>(null);
   const capsule = capsules.find((item) => item.id === capsuleId);
+
+  useEffect(() => {
+    if (!token || !capsuleId) {
+      return;
+    }
+
+    request<Capsule & { unlockReason?: string; capsule?: Capsule }>(`/capsules/${capsuleId}`, {}, token)
+      .then((payload) => {
+        const reason = payload.unlockReason || null;
+        setUnlockReason(reason);
+      })
+      .catch(() => {
+        setUnlockReason(null);
+      });
+  }, [token, capsuleId, capsules]);
 
   async function onUnlockWithKey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1673,6 +1780,10 @@ function CapsuleDetailPage() {
               <dt>Unlock Time</dt>
               <dd>{capsule.unlockAt ? new Date(capsule.unlockAt).toLocaleString() : "Not scheduled"}</dd>
             </div>
+            <div>
+              <dt>Event Trigger</dt>
+              <dd>{capsule.unlockEventRules ? `${capsule.unlockEventRules.type}${capsule.unlockEventRules.metadata?.eventName ? ` (${capsule.unlockEventRules.metadata.eventName})` : ""}` : "None"}</dd>
+            </div>
           </dl>
         </article>
 
@@ -1745,12 +1856,19 @@ function CapsuleDetailPage() {
           </>
         )}
       </article>
+
+      <article className="capsule-detail-card">
+        <h4>Why you're seeing this</h4>
+        <p>{unlockReason || "This capsule has not been unlocked by recommendation flow yet."}</p>
+      </article>
     </section>
   );
 }
 
 function AiServicePage() {
-  const { capsules } = useAppContext();
+  const { capsules, token, user } = useAppContext();
+  const [timeline, setTimeline] = useState<EmotionTimelinePoint[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "draft" | "locked" | "released">("all");
@@ -1821,6 +1939,18 @@ function AiServicePage() {
       average: average.toFixed(2)
     };
   }, [filteredCapsules]);
+
+  useEffect(() => {
+    if (!token || !user?.id) {
+      return;
+    }
+
+    setTimelineLoading(true);
+    request<EmotionTimelinePoint[]>(`/ai/timeline/${user.id}`, {}, token)
+      .then((points) => setTimeline(points))
+      .catch(() => setTimeline([]))
+      .finally(() => setTimelineLoading(false));
+  }, [token, user?.id, capsules.length]);
 
   const topEmotions = useMemo(() => {
     const counts = new Map<string, number>();
@@ -1949,6 +2079,14 @@ function AiServicePage() {
       </div>
 
       <div className="ai-grid">
+        {timelineLoading ? (
+          <article className="ai-card ai-trend-card">
+            <p className="capsule-analysis-note">Loading timeline...</p>
+          </article>
+        ) : (
+          <EmotionTimeline data={timeline} />
+        )}
+
         <article className="ai-card ai-trend-card">
           <div className="ai-card-head">
             <h4>Sentiment Trend</h4>
@@ -1972,7 +2110,7 @@ function AiServicePage() {
             {sentimentBars.map((bar) => (
               <div key={bar.key} className="ai-bar-item">
                 <div className="ai-bar-track">
-                  <span className={`ai-bar-fill ${bar.tone}`} style={{ height: `${Math.max(10, (bar.value / maxSentimentBucket) * 100)}%` }} />
+                  <span className={`ai-bar-fill ${bar.tone} ${heightClass((bar.value / maxSentimentBucket) * 100)}`} />
                 </div>
                 <strong>{bar.value}</strong>
                 <small>{bar.key}</small>

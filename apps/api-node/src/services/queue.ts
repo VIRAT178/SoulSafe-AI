@@ -2,6 +2,7 @@ import { redis } from "./db.js";
 
 const AI_QUEUE = "queue:ai-analysis";
 const SCHEDULED_UNLOCKS = "queue:scheduled-unlocks";
+const EVENT_TRIGGER_CAPSULES = "queue:event-trigger-capsules";
 
 export async function enqueueAiAnalysis(capsuleId: string): Promise<void> {
   await redis().rPush(AI_QUEUE, capsuleId);
@@ -42,4 +43,17 @@ export async function rescheduleUnlockInHours(capsuleId: string, hours: number):
     score,
     value: capsuleId
   });
+}
+
+export async function registerEventTriggerCapsule(capsuleId: string): Promise<void> {
+  await redis().sAdd(EVENT_TRIGGER_CAPSULES, capsuleId);
+}
+
+export async function unregisterEventTriggerCapsule(capsuleId: string): Promise<void> {
+  await redis().sRem(EVENT_TRIGGER_CAPSULES, capsuleId);
+}
+
+export async function listEventTriggerCapsules(limit = 100): Promise<string[]> {
+  const capsuleIds = await redis().sMembers(EVENT_TRIGGER_CAPSULES);
+  return capsuleIds.slice(0, limit);
 }

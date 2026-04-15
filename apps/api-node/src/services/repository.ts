@@ -1,6 +1,21 @@
 import { ObjectId } from "mongodb";
-import { capsulesCollection, type CapsuleDoc, usersCollection } from "./db.js";
+import {
+  aiAnalysesCollection,
+  capsulesCollection,
+  type CapsuleDoc,
+  unlockEventsCollection,
+  usersCollection
+} from "./db.js";
 import { verifyPassword } from "./security.js";
+
+export type UnlockEventRule = {
+  type: "birthday" | "exam" | "breakup" | "custom";
+  date?: string;
+  metadata?: {
+    personName?: string;
+    eventName?: string;
+  };
+};
 
 export type UserRecord = {
   id: string;
@@ -24,10 +39,32 @@ export type CapsuleRecord = {
   mediaUrl?: string;
   status: "draft" | "locked" | "released";
   unlockAt?: string;
+  unlockEventRules?: UnlockEventRule;
   sentimentScore?: number;
+  dominantEmotion?: string;
   emotionLabels?: string[];
+  contextTags?: string[];
+  analyzedAt?: string;
+  emotionSimilarityScore?: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type AiTimelinePoint = {
+  capsuleId: string;
+  date: string;
+  sentimentScore: number;
+  emotion: string;
+  capsuleTitle: string;
+};
+
+export type UnlockEventRecord = {
+  capsuleId: string;
+  userId: string;
+  triggerType: "date" | "event" | "emotion" | "manual";
+  decisionReason: string;
+  eventName?: string;
+  processedAt: string;
 };
 
 function toUserRecord(doc: {
@@ -66,8 +103,13 @@ function toCapsuleRecord(doc: CapsuleDoc): CapsuleRecord {
     mediaUrl: doc.mediaUrl,
     status: doc.status,
     unlockAt: doc.unlockAt,
+    unlockEventRules: doc.unlockEventRules,
     sentimentScore: doc.sentimentScore,
+    dominantEmotion: doc.dominantEmotion,
     emotionLabels: doc.emotionLabels,
+    contextTags: doc.contextTags,
+    analyzedAt: doc.analyzedAt,
+    emotionSimilarityScore: doc.emotionSimilarityScore,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt
   };
@@ -189,9 +231,11 @@ export async function createCapsule(input: {
   encryptionMethod: string;
   mediaUrl?: string;
   unlockAt?: string;
+  unlockEventRules?: UnlockEventRule;
   unlockKeyHash?: string;
 }): Promise<CapsuleRecord> {
   const now = new Date().toISOString();
+  const hasEventRule = Boolean(input.unlockEventRules?.type);
   const doc: CapsuleDoc = {
     _id: new ObjectId(),
     userId: input.userId,
@@ -199,8 +243,9 @@ export async function createCapsule(input: {
     encryptedPayload: input.encryptedPayload,
     encryptionMethod: input.encryptionMethod,
     mediaUrl: input.mediaUrl,
-    status: input.unlockAt || input.unlockKeyHash ? "locked" : "draft",
+    status: input.unlockAt || input.unlockKeyHash || hasEventRule ? "locked" : "draft",
     unlockAt: input.unlockAt,
+    unlockEventRules: input.unlockEventRules,
     unlockKeyHash: input.unlockKeyHash,
     createdAt: now,
     updatedAt: now
@@ -253,7 +298,10 @@ export async function lockCapsule(capsuleId: string, unlockAt: string): Promise<
 
 export async function releaseCapsule(capsuleId: string): Promise<CapsuleRecord | null> {
   const result = await capsulesCollection().findOneAndUpdate(
-    { _id: new ObjectId(capsuleId) },
+    {
+      _id: new ObjectId(capsuleId),
+      status: { $ne: "released" }
+    },
     {
       $set: {
         status: "released",
@@ -294,17 +342,96 @@ export async function unlockCapsuleWithKey(capsuleId: string, unlockKey: string)
   return result ? toCapsuleRecord(result) : null;
 }
 
-export async function attachAiSignals(capsuleId: string, sentimentScore: number, emotionLabels: string[]): Promise<void> {
+export async function attachAiSignals(
+  capsuleId: string,
+  sentimentScore: number,
+  dominantEmotion: string,
+  emotionLabels: string[],
+  contextTags: string[],
+  analyzedAt: string,
+  emotionSimilarityScore: number
+): Promise<void> {
+  const capsule = await getCapsuleById(capsuleId);
+  if (!capsule) {
+    return;
+  }
+
   await capsulesCollection().updateOne(
     { _id: new ObjectId(capsuleId) },
     {
       $set: {
         sentimentScore,
+        dominantEmotion,
         emotionLabels,
+        contextTags,
+        analyzedAt,
+        emotionSimilarityScore,
         updatedAt: new Date().toISOString()
       }
     }
   );
+
+  await aiAnalysesCollection().insertOne({
+    _id: new ObjectId(),
+    capsuleId,
+    userId: capsule.userId,
+    capsuleTitle: capsule.title,
+    sentimentScore,
+    dominantEmotion,
+    emotionLabels,
+    contextTags,
+    emotionSimilarityScore,
+    analyzedAt
+  });
+}
+
+export async function listAiTimeline(userId: string): Promise<AiTimelinePoint[]> {
+  const docs = await aiAnalysesCollection()
+    .find({ userId })
+    .sort({ analyzedAt: 1 })
+    .toArray();
+
+  return docs.map((doc) => ({
+    capsuleId: doc.capsuleId,
+    date: doc.analyzedAt,
+    sentimentScore: doc.sentimentScore,
+    emotion: doc.dominantEmotion,
+    capsuleTitle: doc.capsuleTitle
+  }));
+}
+
+export async function listEventRuleCapsules(limit = 100): Promise<CapsuleRecord[]> {
+  const docs = await capsulesCollection()
+    .find({ status: "locked", unlockEventRules: { $exists: true } })
+    .sort({ updatedAt: -1 })
+    .limit(limit)
+    .toArray();
+
+  return docs.map(toCapsuleRecord);
+}
+
+export async function recordUnlockEvent(input: UnlockEventRecord): Promise<void> {
+  await unlockEventsCollection().insertOne({
+    _id: new ObjectId(),
+    capsuleId: input.capsuleId,
+    userId: input.userId,
+    triggerType: input.triggerType,
+    decisionReason: input.decisionReason,
+    eventName: input.eventName,
+    processedAt: input.processedAt
+  });
+}
+
+export async function getLatestUnlockReason(capsuleId: string): Promise<string | null> {
+  const event = await unlockEventsCollection().findOne(
+    { capsuleId },
+    {
+      sort: { processedAt: -1 },
+      projection: { decisionReason: 1 }
+    }
+  );
+
+  return event?.decisionReason || null;
 }
 
 export async function deleteCapsule(capsuleId: string, userId: string): Promise<boolean> {

@@ -25,11 +25,46 @@ export type CapsuleDoc = {
   mediaUrl?: string;
   status: "draft" | "locked" | "released";
   unlockAt?: string;
+  unlockEventRules?: {
+    type: "birthday" | "exam" | "breakup" | "custom";
+    date?: string;
+    metadata?: {
+      personName?: string;
+      eventName?: string;
+    };
+  };
   unlockKeyHash?: string;
   sentimentScore?: number;
+  dominantEmotion?: string;
   emotionLabels?: string[];
+  contextTags?: string[];
+  analyzedAt?: string;
+  emotionSimilarityScore?: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type AiAnalysisDoc = {
+  _id: ObjectId;
+  capsuleId: string;
+  userId: string;
+  capsuleTitle: string;
+  sentimentScore: number;
+  dominantEmotion: string;
+  emotionLabels: string[];
+  contextTags: string[];
+  emotionSimilarityScore: number;
+  analyzedAt: string;
+};
+
+export type UnlockEventDoc = {
+  _id: ObjectId;
+  capsuleId: string;
+  userId: string;
+  triggerType: "date" | "event" | "emotion" | "manual";
+  decisionReason: string;
+  eventName?: string;
+  processedAt: string;
 };
 
 const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/soulsafe";
@@ -58,6 +93,14 @@ export function usersCollection() {
 
 export function capsulesCollection() {
   return mongoClient.db().collection<CapsuleDoc>("capsules");
+}
+
+export function aiAnalysesCollection() {
+  return mongoClient.db().collection<AiAnalysisDoc>("ai_analyses");
+}
+
+export function unlockEventsCollection() {
+  return mongoClient.db().collection<UnlockEventDoc>("unlock_events");
 }
 
 export function redis(): RedisClientType {

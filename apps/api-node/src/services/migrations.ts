@@ -70,14 +70,79 @@ export async function runMongoMigrations(db: Db): Promise<void> {
         mediaUrl: { bsonType: ["string", "null"] },
         status: { enum: ["draft", "locked", "released"] },
         unlockAt: { bsonType: ["string", "null"] },
+        unlockEventRules: {
+          bsonType: ["object", "null"],
+          additionalProperties: false,
+          required: ["type"],
+          properties: {
+            type: { enum: ["birthday", "exam", "breakup", "custom"] },
+            date: { bsonType: ["string", "null"] },
+            metadata: {
+              bsonType: ["object", "null"],
+              additionalProperties: false,
+              properties: {
+                personName: { bsonType: ["string", "null"] },
+                eventName: { bsonType: ["string", "null"] }
+              }
+            }
+          }
+        },
         unlockKeyHash: { bsonType: ["string", "null"] },
         sentimentScore: { bsonType: ["double", "int", "long", "null"] },
+        dominantEmotion: { bsonType: ["string", "null"] },
         emotionLabels: {
           bsonType: ["array", "null"],
           items: { bsonType: "string" }
         },
+        contextTags: {
+          bsonType: ["array", "null"],
+          items: { bsonType: "string" }
+        },
+        analyzedAt: { bsonType: ["string", "null"] },
+        emotionSimilarityScore: { bsonType: ["double", "int", "long", "null"] },
         createdAt: { bsonType: "string" },
         updatedAt: { bsonType: "string" }
+      }
+    }
+  });
+
+  await ensureCollectionWithValidator(db, "ai_analyses", {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["capsuleId", "userId", "capsuleTitle", "sentimentScore", "dominantEmotion", "emotionLabels", "contextTags", "emotionSimilarityScore", "analyzedAt"],
+      additionalProperties: true,
+      properties: {
+        capsuleId: { bsonType: "string", minLength: 24, maxLength: 24 },
+        userId: { bsonType: "string", minLength: 24, maxLength: 24 },
+        capsuleTitle: { bsonType: "string", minLength: 1, maxLength: 200 },
+        sentimentScore: { bsonType: ["double", "int", "long"] },
+        dominantEmotion: { bsonType: "string", minLength: 1 },
+        emotionLabels: {
+          bsonType: "array",
+          items: { bsonType: "string" }
+        },
+        contextTags: {
+          bsonType: "array",
+          items: { bsonType: "string" }
+        },
+        emotionSimilarityScore: { bsonType: ["double", "int", "long"] },
+        analyzedAt: { bsonType: "string" }
+      }
+    }
+  });
+
+  await ensureCollectionWithValidator(db, "unlock_events", {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["capsuleId", "userId", "triggerType", "decisionReason", "processedAt"],
+      additionalProperties: true,
+      properties: {
+        capsuleId: { bsonType: "string", minLength: 24, maxLength: 24 },
+        userId: { bsonType: "string", minLength: 24, maxLength: 24 },
+        triggerType: { enum: ["date", "event", "emotion", "manual"] },
+        decisionReason: { bsonType: "string", minLength: 1 },
+        eventName: { bsonType: ["string", "null"] },
+        processedAt: { bsonType: "string" }
       }
     }
   });
@@ -86,4 +151,9 @@ export async function runMongoMigrations(db: Db): Promise<void> {
   await ensureIndex(db, "capsules", { userId: 1, createdAt: -1 }, { name: "capsules_user_created_idx" });
   await ensureIndex(db, "capsules", { userId: 1, status: 1, unlockAt: 1 }, { name: "capsules_user_status_unlock_idx" });
   await ensureIndex(db, "capsules", { status: 1, unlockAt: 1 }, { name: "capsules_status_unlock_idx" });
+  await ensureIndex(db, "capsules", { status: 1, "unlockEventRules.type": 1, "unlockEventRules.date": 1 }, { name: "capsules_event_rule_idx" });
+  await ensureIndex(db, "ai_analyses", { userId: 1, analyzedAt: -1 }, { name: "ai_analyses_user_date_idx" });
+  await ensureIndex(db, "ai_analyses", { capsuleId: 1, analyzedAt: -1 }, { name: "ai_analyses_capsule_date_idx" });
+  await ensureIndex(db, "unlock_events", { capsuleId: 1, processedAt: -1 }, { name: "unlock_events_capsule_processed_idx" });
+  await ensureIndex(db, "unlock_events", { capsuleId: 1, triggerType: 1, processedAt: -1 }, { name: "unlock_events_capsule_trigger_processed_idx" });
 }

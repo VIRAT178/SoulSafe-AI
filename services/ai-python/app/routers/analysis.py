@@ -1,6 +1,6 @@
 import math
 import re
-from collections import defaultdict
+from datetime import datetime, timezone
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -103,6 +103,8 @@ class AnalysisResponse(BaseModel):
     recommendationHints: list[str]
     sentimentTrendScore: float
     dominantEmotion: str
+    emotionSimilarityScore: float
+    analyzedAt: str
     transcriptDetected: bool
     recommendationSummary: str | None = None
 
@@ -236,6 +238,15 @@ def _recommendation_hints(sentiment: float, trend: float, emotion_labels: list[s
     return sorted(set(hints))
 
 
+def _emotion_similarity_score(emotions: dict[str, float], dominant_emotion: str) -> float:
+    total = sum(max(0.0, score) for score in emotions.values())
+    if total <= 0:
+        return 0.0
+
+    dominant_score = max(0.0, emotions.get(dominant_emotion, 0.0))
+    return max(0.0, min(1.0, dominant_score / total))
+
+
 @router.post("/analyze", response_model=AnalysisResponse)
 def analyze(payload: AnalysisRequest) -> AnalysisResponse:
     normalized_text = _normalize_text(payload.text)
@@ -271,6 +282,8 @@ def analyze(payload: AnalysisRequest) -> AnalysisResponse:
         summary = _extractive_summary(normalized_text, context_tags, payload.retrievalDocuments)
 
     dominant_emotion = emotion_labels[0] if emotion_labels else "neutral"
+    emotion_similarity_score = _emotion_similarity_score(emotions, dominant_emotion)
+    analyzed_at = datetime.now(timezone.utc).isoformat()
 
     return AnalysisResponse(
         capsuleId=payload.capsuleId,
@@ -280,6 +293,8 @@ def analyze(payload: AnalysisRequest) -> AnalysisResponse:
         recommendationHints=hints,
         sentimentTrendScore=round(trend_score, 4),
         dominantEmotion=dominant_emotion,
+        emotionSimilarityScore=round(emotion_similarity_score, 4),
+        analyzedAt=analyzed_at,
         transcriptDetected=transcript_detected,
         recommendationSummary=summary,
     )
