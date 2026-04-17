@@ -49,6 +49,10 @@ NEGATIVE_WORDS = {
     "panic",
     "cry",
     "broken",
+    "breakup",
+    "heartbreak",
+    "heartbroken",
+    "betrayed",
     "fear",
     "miss",
     "sorry",
@@ -84,6 +88,19 @@ CONTEXT_PATTERNS: dict[str, tuple[str, ...]] = {
     "intent:apology": ("sorry", "apologize", "forgive me", "my fault"),
     "intent:encouragement": ("you can", "stay strong", "keep going", "believe in you"),
     "intent:legacy": ("remember me", "legacy", "for my children", "after i am gone"),
+}
+
+EMOTION_VALENCE: dict[str, float] = {
+    "joy": 0.9,
+    "love": 0.7,
+    "gratitude": 0.85,
+    "hope": 0.55,
+    "nostalgia": 0.05,
+    "sadness": -0.85,
+    "fear": -0.75,
+    "anger": -0.9,
+    "regret": -0.6,
+    "neutral": 0.0,
 }
 
 
@@ -247,6 +264,44 @@ def _emotion_similarity_score(emotions: dict[str, float], dominant_emotion: str)
     return max(0.0, min(1.0, dominant_score / total))
 
 
+def _emotion_weighted_valence(emotions: dict[str, float]) -> float:
+    weighted_sum = 0.0
+    total_weight = 0.0
+
+    for emotion, raw_score in emotions.items():
+        score = max(0.0, raw_score)
+        if score <= 0:
+            continue
+        weighted_sum += EMOTION_VALENCE.get(emotion, 0.0) * score
+        total_weight += score
+
+    if total_weight <= 0:
+        return 0.0
+
+    return max(-1.0, min(1.0, weighted_sum / total_weight))
+
+
+def _blend_sentiment_with_emotions(base_sentiment: float, emotions: dict[str, float], dominant_emotion: str) -> float:
+    emotion_valence = _emotion_weighted_valence(emotions)
+    emotion_strength = sum(max(0.0, score) for score in emotions.values())
+
+    if emotion_strength <= 0:
+        return base_sentiment
+
+    # Keep lexical sentiment primary, but let emotion evidence steer tie/cancel cases.
+    blended = (0.7 * base_sentiment) + (0.3 * emotion_valence)
+
+    # If near-neutral despite clear non-neutral dominant emotion, nudge out of 0.00.
+    if abs(blended) < 0.05:
+        dominant_valence = EMOTION_VALENCE.get(dominant_emotion, 0.0)
+        if dominant_valence >= 0.35:
+            blended = max(blended, 0.12)
+        elif dominant_valence <= -0.35:
+            blended = min(blended, -0.12)
+
+    return max(-1.0, min(1.0, blended))
+
+
 @router.post("/analyze", response_model=AnalysisResponse)
 def analyze(payload: AnalysisRequest) -> AnalysisResponse:
     normalized_text = _normalize_text(payload.text)
@@ -270,6 +325,8 @@ def analyze(payload: AnalysisRequest) -> AnalysisResponse:
             emotion_labels = ["neutral"]
 
     context_tags = _context_tags(normalized_text)
+    dominant_emotion = emotion_labels[0] if emotion_labels else "neutral"
+    sentiment_score = _blend_sentiment_with_emotions(sentiment_score, emotions, dominant_emotion)
     trend_score = _sentiment_trend(sentence_scores)
     hints = _recommendation_hints(sentiment_score, trend_score, emotion_labels, context_tags)
 
@@ -281,7 +338,6 @@ def analyze(payload: AnalysisRequest) -> AnalysisResponse:
     if payload.includeRecommendationSummary:
         summary = _extractive_summary(normalized_text, context_tags, payload.retrievalDocuments)
 
-    dominant_emotion = emotion_labels[0] if emotion_labels else "neutral"
     emotion_similarity_score = _emotion_similarity_score(emotions, dominant_emotion)
     analyzed_at = datetime.now(timezone.utc).isoformat()
 

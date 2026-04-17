@@ -611,11 +611,11 @@ function WelcomePage() {
   const [isWelcomeNavOpen, setIsWelcomeNavOpen] = useState(false);
 
   const navItems = [
-    { label: "Home", to: "/" },
-    { label: "About", to: "/about" },
-    { label: "Features", to: "/about" },
-    { label: "Support", to: "/about" },
-    { label: "FAQ", to: "/about" }
+    { label: "Home", to: "/login" },
+    { label: "About", to: "/login" },
+    { label: "Features", to: "/login" },
+    { label: "Support", to: "/login" },
+    { label: "FAQ", to: "/login" }
   ];
 
   const featureCards = [
@@ -624,15 +624,19 @@ function WelcomePage() {
     { title: "AI Context", body: "Emotional insights that deepen every capsule." }
   ];
 
+  const premiumMetrics = [
+    { label: "Capsules Secured", value: "1.2M+" },
+    { label: "Auto Unlock Rules", value: "48" },
+    { label: "AI Context Accuracy", value: "96.4%" }
+  ];
+
   return (
-    <div className="welcome-shell" id="home">
+    <div className="welcome-shell welcome-premium" id="home">
       <div className="welcome-backdrop" aria-hidden="true">
         <div className="welcome-sky" />
         <div className="welcome-glow glow-left" />
         <div className="welcome-glow glow-right" />
-        <div className="welcome-mountain mountain-back" />
-        <div className="welcome-mountain mountain-front" />
-        <div className="welcome-haze" />
+        <div className="welcome-premium-grid" />
       </div>
 
       <header className="welcome-topbar">
@@ -672,28 +676,37 @@ function WelcomePage() {
 
       <main className="welcome-hero" id="app">
         <section className="welcome-copy">
-          <p className="hero-kicker">Next-generation memory vault</p>
-          <h1>Awesome memory app for private messages, future moments, and AI-guided release.</h1>
+          <p className="hero-kicker">Premium Memory Platform</p>
+          <h1>Design your future messages in a private AI-native vault.</h1>
           <p className="hero-description">
-            SoulSafe blends encrypted capsules, email-verified access, and timed delivery into a dramatic
-            mobile-first experience that feels alive at every stage.
+            SoulSafe combines encryption, release orchestration, and emotional analysis into one elegant control
+            surface for meaningful moments.
           </p>
 
           <div className="hero-cta-row">
-            <Link to="/login" className="store-btn store-btn-primary">
-              <span className="store-icon" aria-hidden="true">⬇</span>
+            <Link to="/register" className="store-btn store-btn-primary">
+              <span className="store-icon" aria-hidden="true">✦</span>
               <span>
-                <strong>App Store</strong>
-                <small>Login to continue</small>
+                <strong>Create Account</strong>
+                <small>Start your capsule space</small>
               </span>
             </Link>
             <Link to="/login" className="store-btn store-btn-secondary">
-              <span className="store-icon" aria-hidden="true">▶</span>
+              <span className="store-icon" aria-hidden="true">→</span>
               <span>
-                <strong>Google Play</strong>
-                <small>Login to continue</small>
+                <strong>Open Dashboard</strong>
+                <small>Continue your workflow</small>
               </span>
             </Link>
+          </div>
+
+          <div className="welcome-premium-metrics" aria-label="Platform metrics">
+            {premiumMetrics.map((metric) => (
+              <article key={metric.label} className="welcome-premium-metric-card">
+                <strong>{metric.value}</strong>
+                <span>{metric.label}</span>
+              </article>
+            ))}
           </div>
 
           <div className="hero-features" id="features">
@@ -706,58 +719,55 @@ function WelcomePage() {
           </div>
         </section>
 
-        <section className="welcome-showcase" id="team" aria-label="App showcase">
-          <div className="floating-card floating-card-left">
-            <span className="floating-dot" />
-            <strong>Pure CSS vibes</strong>
-            <p>Layered gradients, glow, and motion without any external art.</p>
-          </div>
+        <section className="welcome-showcase welcome-premium-showcase" id="team" aria-label="App showcase">
+          <article className="welcome-premium-panel welcome-premium-panel-main">
+            <div className="welcome-premium-panel-head">
+              <span>Control Center</span>
+              <span className="status-chip">Synced</span>
+            </div>
+            <h3>Capsule Operations</h3>
+            <p>Manage lock windows, event triggers, and AI context from a single elegant workspace.</p>
 
-          <div className="phone-frame">
-            <div className="phone-notch" />
-            <div className="phone-screen">
-              <div className="phone-screen-top">
-                <span>My private capsule</span>
-                <span className="status-chip">Live</span>
+            <div className="welcome-premium-progress" role="img" aria-label="Capsule security confidence">
+              <span className="welcome-premium-progress-fill" />
+            </div>
+
+            <div className="welcome-premium-list">
+              <div>
+                <strong>+45</strong>
+                <small>Capsules this month</small>
               </div>
-              <div className="phone-metric">
-                <span className="phone-metric-label">Sentiment</span>
-                <strong>1,270</strong>
-                <div className="phone-bars">
-                  <span />
-                  <span />
-                  <span />
-                </div>
+              <div>
+                <strong>17</strong>
+                <small>Event unlock rules</small>
               </div>
-              <div className="phone-grid">
-                <div>
-                  <span>870</span>
-                  <small>encrypted</small>
-                </div>
-                <div>
-                  <span>400</span>
-                  <small>released</small>
-                </div>
-              </div>
-              <div className="phone-rings">
-                <span />
-                <span />
-                <span />
+              <div>
+                <strong>0</strong>
+                <small>Security incidents</small>
               </div>
             </div>
-          </div>
+          </article>
 
-          <div className="floating-card floating-card-right">
-            <span className="floating-dot accent" />
-            <strong>Timed release</strong>
-            <p>Private capsules unlock exactly when the moment feels right.</p>
-          </div>
+          <article className="welcome-premium-panel welcome-premium-panel-side">
+            <h4>Recent Intelligence</h4>
+            <ul>
+              <li>
+                <span>Sentiment Batch</span>
+                <strong>Ready</strong>
+              </li>
+              <li>
+                <span>Unlock Advice</span>
+                <strong>Queued</strong>
+              </li>
+              <li>
+                <span>Delivery Sync</span>
+                <strong>Live</strong>
+              </li>
+            </ul>
+          </article>
 
-          <div className="floating-card floating-card-bottom-left" id="contact">
-            <span className="floating-dot warm" />
-            <strong>Premium support</strong>
-            <p>Full-stack orchestration across web, API, and worker services.</p>
-          </div>
+          <div className="welcome-premium-orb" aria-hidden="true" />
+          <div className="welcome-premium-orb welcome-premium-orb-alt" aria-hidden="true" />
         </section>
       </main>
     </div>
@@ -875,13 +885,13 @@ function LoginPage() {
   return (
     <AuthShell title="Welcome back" subtitle="Login to continue to your SoulSafe dashboard.">
       <form className="auth-form" onSubmit={onSubmit}>
-        <label>Email<input value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-        <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+        <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" required /></label>
+        <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" placeholder="Enter your password" required /></label>
         {error ? <p className="error-text">{error}</p> : null}
-        <button className="btn btn-primary" disabled={loading}>{loading ? "Signing in..." : "Login"}</button>
+        <button className="btn btn-primary auth-submit" disabled={loading}>{loading ? "Signing in..." : "Login"}</button>
         <div className="auth-links">
-          <Link to="/forgot-password">Forgot password?</Link>
-          <Link to="/register">Create account</Link>
+          <Link className="auth-link-pill" to="/forgot-password">Forgot password?</Link>
+          <Link className="auth-link-pill" to="/register">Create account</Link>
         </div>
       </form>
     </AuthShell>
@@ -944,25 +954,25 @@ function RegisterPage() {
     <AuthShell title="Create your account" subtitle="Register, verify your email OTP, and enter your dashboard.">
       {!otpStep ? (
         <form className="auth-form" onSubmit={onStart}>
-          <label>Full name<input value={fullName} onChange={(event) => setFullName(event.target.value)} required /></label>
-          <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-          <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} /></label>
+          <label>Full name<input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" placeholder="Your full name" required /></label>
+          <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="you@example.com" required /></label>
+          <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" placeholder="At least 8 characters" required minLength={8} /></label>
           <label>Profile picture<input type="file" accept="image/*" onChange={onPickProfilePic} /></label>
           {profilePicName ? <p className="success-text">Selected: {profilePicName}</p> : null}
           <label>Bio<textarea value={bio} onChange={(event) => setBio(event.target.value)} placeholder="Tell us about yourself" /></label>
           {error ? <p className="error-text">{error}</p> : null}
-          <button className="btn btn-primary" disabled={loading}>{loading ? "Creating..." : "Register"}</button>
+          <button className="btn btn-primary auth-submit" disabled={loading}>{loading ? "Creating..." : "Register"}</button>
           <div className="auth-links">
-            <Link to="/login">Already have an account?</Link>
+            <Link className="auth-link-pill" to="/login">Already have an account?</Link>
           </div>
         </form>
       ) : (
         <form className="auth-form" onSubmit={onVerify}>
           <p className="success-text">{info}</p>
           <label>Email<input value={email} disabled /></label>
-          <label>Email OTP<input value={otp} onChange={(event) => setOtp(event.target.value)} required /></label>
+          <label>Email OTP<input value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="Enter OTP" required /></label>
           {error ? <p className="error-text">{error}</p> : null}
-          <button className="btn btn-primary" disabled={loading}>{loading ? "Verifying..." : "Verify OTP & Continue"}</button>
+          <button className="btn btn-primary auth-submit" disabled={loading}>{loading ? "Verifying..." : "Verify OTP & Continue"}</button>
         </form>
       )}
     </AuthShell>
@@ -1042,30 +1052,67 @@ function AuthShell({
   children: JSX.Element;
 }) {
   const isLoginView = title.toLowerCase().includes("welcome");
+  const switchPrompt = isLoginView ? "New to SoulSafe?" : "Already with SoulSafe?";
+  const switchCta = isLoginView ? "Create your account" : "Sign in now";
+  const authHighlights = isLoginView
+    ? ["Private emotional timeline", "End-to-end encrypted capsules", "AI-powered growth insights"]
+    : ["Quick account setup", "Email OTP verification", "Personalized daily recommendations"];
 
   return (
     <div className="auth-shell auth-shell-pro">
       <div className="auth-backdrop" aria-hidden="true">
         <div className="auth-glow auth-glow-one" />
         <div className="auth-glow auth-glow-two" />
+        <div className="auth-glow auth-glow-three" />
         <div className="auth-grid-lines" />
+        <div className="auth-wave auth-wave-one" />
+        <div className="auth-wave auth-wave-two" />
       </div>
 
       <section className="auth-modal-grid">
         <div className="auth-card auth-card-main">
-          <Link to="/" className="auth-close" aria-label="Back to welcome page">×</Link>
-          <p className="badge-line">SoulSafe AI</p>
-          <h1>{title}</h1>
-          <p>{subtitle}</p>
+          <div className="auth-card-orb auth-card-orb-one" aria-hidden="true" />
+          <div className="auth-card-orb auth-card-orb-two" aria-hidden="true" />
+          <div className="auth-card-top">
+            <Link to="/" className="welcome-brand" aria-label="SoulSafe welcome page">
+              <span className="brand-mark">S</span>
+              <span className="brand-copy">
+                <strong>SoulSafe AI</strong>
+                <span>Secure memory capsules</span>
+              </span>
+            </Link>
+            <Link to="/" className="auth-close" aria-label="Back to welcome page">×</Link>
+          </div>
+          <div className="auth-copy">
+            <p className="badge-line">Private by design</p>
+            <h1>{title}</h1>
+            <p>{subtitle}</p>
+          </div>
           {children}
         </div>
 
-        <div className="auth-card auth-card-secondary">
-          <p>{isLoginView ? "You are not a member?" : "Already have an account?"}</p>
-          <Link to={isLoginView ? "/register" : "/login"} className="auth-secondary-link">
-            {isLoginView ? "Register Now" : "Login Now"}
-          </Link>
-        </div>
+        <aside className="auth-card auth-card-secondary auth-card-showcase">
+          <p className="auth-showcase-kicker">Intelligent. Encrypted. Timed.</p>
+          <h2>Future messages with premium protection</h2>
+          <p className="auth-showcase-copy">
+            Create emotional capsules, schedule meaningful unlock moments, and let AI help you craft what matters most.
+          </p>
+          <ul className="auth-secondary-list">
+            {authHighlights.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+
+          <div className="auth-switch-box">
+            <p>{switchPrompt}</p>
+            <Link to={isLoginView ? "/register" : "/login"} className="auth-secondary-link">
+              {switchCta}
+            </Link>
+          </div>
+
+          <div className="auth-showcase-orb" aria-hidden="true" />
+          <div className="auth-showcase-orb auth-showcase-orb-alt" aria-hidden="true" />
+        </aside>
       </section>
     </div>
   );
