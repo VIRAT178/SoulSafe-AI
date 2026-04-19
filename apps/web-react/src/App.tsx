@@ -816,20 +816,39 @@ function AboutPage() {
         </div>
       </header>
 
-      <main className="about-main">
-        <section className="about-hero" id="mission">
-          <p className="hero-kicker">About SoulSafe</p>
-          <h1>We preserve meaningful moments and deliver them at the right emotional time.</h1>
-          <p>
-            SoulSafe is built to help people store private memories, letters, and media today, then unlock those capsules with AI-guided timing and secure access in the future.
-          </p>
+      <main className="about-main about-main-premium">
+        <section className="about-hero about-hero-premium" id="mission">
+          <div className="about-hero-copy">
+            <p className="hero-kicker">About SoulSafe</p>
+            <h1>We preserve meaningful moments and deliver them at the right emotional time.</h1>
+            <p>
+              SoulSafe helps people store private memories, letters, and media today, then unlock those capsules with
+              AI-guided timing and secure access in the future.
+            </p>
+          </div>
+
+          <div className="about-hero-kpis" role="list" aria-label="SoulSafe highlights">
+            <article role="listitem">
+              <span>Security model</span>
+              <strong>End-to-end protected</strong>
+            </article>
+            <article role="listitem">
+              <span>AI assistance</span>
+              <strong>Sentiment + context aware</strong>
+            </article>
+            <article role="listitem">
+              <span>Delivery model</span>
+              <strong>Date and event unlocks</strong>
+            </article>
+          </div>
         </section>
 
-        <section className="about-grid" id="support">
-          <article className="about-card">
+        <section className="about-grid about-grid-premium" id="support">
+          <article className="about-card about-story-card">
             <h3>Who We Are</h3>
             <p>
-              We are a product team focused on emotional technology: combining secure engineering, capsule encryption, and recommendation intelligence to make future delivery meaningful.
+              We are a product team focused on emotional technology, blending secure engineering, capsule encryption,
+              and recommendation intelligence to make future delivery meaningful.
             </p>
             <ul>
               <li>Private by default</li>
@@ -838,7 +857,16 @@ function AboutPage() {
             </ul>
           </article>
 
-          <article className="about-card">
+          <article className="about-card about-story-card">
+            <h3>How It Works</h3>
+            <ol>
+              <li>Create a private capsule with text and optional media.</li>
+              <li>Secure it with your own encryption key and unlock logic.</li>
+              <li>Receive AI-backed recommendations and timed release support.</li>
+            </ol>
+          </article>
+
+          <article className="about-card about-contact-card">
             <h3>Support Contact</h3>
             <p>For account access, unlock issues, or delivery concerns, contact our support team.</p>
             <div className="about-contact-list">
@@ -849,8 +877,11 @@ function AboutPage() {
           </article>
         </section>
 
-        <section className="about-faq" id="faq">
-          <h3>Frequently Asked Questions</h3>
+        <section className="about-faq about-faq-premium" id="faq">
+          <div className="about-faq-head">
+            <h3>Frequently Asked Questions</h3>
+            <p>Practical answers about privacy, unlock behavior, and AI analysis.</p>
+          </div>
           <div className="about-faq-list">
             {faqItems.map((item) => (
               <details key={item.question} className="about-faq-item">
@@ -1253,7 +1284,15 @@ function DashboardLayout() {
         </header>
 
         {isDashboardNavOpen ? (
-          <aside className="dashboard-mobile-menu" aria-label="Dashboard mobile menu">
+          <>
+            <button
+              type="button"
+              className="dashboard-mobile-backdrop"
+              aria-label="Close dashboard menu"
+              onClick={() => setIsDashboardNavOpen(false)}
+            />
+
+            <aside className="dashboard-mobile-menu" aria-label="Dashboard mobile menu">
             <nav className="dashboard-mobile-nav">
               {nav.map((item) => (
                 <Link
@@ -1277,7 +1316,8 @@ function DashboardLayout() {
                 Logout
               </button>
             </div>
-          </aside>
+            </aside>
+          </>
         ) : null}
 
         <Outlet />
@@ -1312,6 +1352,8 @@ function DashboardHomePage() {
 
   const released = capsules.filter((item) => item.status === "released").length;
   const locked = capsules.filter((item) => item.status === "locked").length;
+  const serviceHealth = capsules.length > 0 ? "Stable" : "Idle";
+  const releaseRate = capsules.length ? Math.round((released / capsules.length) * 100) : 0;
   const activitySeries = useMemo(() => {
     const bucketCount = 12;
     const windowMs = 24 * 60 * 60 * 1000;
@@ -1352,157 +1394,132 @@ function DashboardHomePage() {
   }, [capsules]);
 
   return (
-    <section className="dashboard-home">
-      <div className="dashboard-hero-card">
-        <div className="dashboard-hero-copy">
-          <p className="hero-kicker">SoulSafe dashboard</p>
-          <h1>Welcome.</h1>
-          <p className="hero-description">
-            Private capsules, timed release, and AI-guided memory analysis in a single cinematic control surface.
-          </p>
-
-          <label className="dashboard-searchbar" aria-label="Search capsule vault">
-            <span className="dashboard-search-icon" aria-hidden="true">⌕</span>
-            <input
-              className="dashboard-search-input"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search capsules, releases, and alerts"
-            />
-            {searchQuery ? (
-              <button type="button" className="dashboard-search-clear" aria-label="Clear search" onClick={() => setSearchQuery("")}>
-                ×
-              </button>
-            ) : null}
-          </label>
-
-          <p className="dashboard-search-help">{filteredCapsules.length} matching capsule{filteredCapsules.length === 1 ? "" : "s"}</p>
-
-          <div className="hero-cta-row dashboard-cta-row">
-            <Link to="/dashboard/services/capsules" className="store-btn store-btn-primary dashboard-cta-btn">
-              <span className="store-icon" aria-hidden="true">+</span>
-              <span>
-                <strong>Create capsule</strong>
-                <small>Store a future message</small>
-              </span>
-            </Link>
-            <Link to="/dashboard/services/ai" className="store-btn store-btn-secondary dashboard-cta-btn">
-              <span className="store-icon" aria-hidden="true">✦</span>
-              <span>
-                <strong>Open AI insights</strong>
-                <small>Review sentiment and prompts</small>
-              </span>
-            </Link>
+    <section className="dashboard-home dashboard-home-analytics">
+      <article className="dashboard-analytics-shell" aria-label="SoulSafe analytics dashboard">
+        <header className="dashboard-analytics-head">
+          <div className="dashboard-analytics-title">
+            <p className="hero-kicker">SoulSafe analytics</p>
+            <h1>Monitor your memory platform.</h1>
+            <p className="hero-description">
+              Operational visibility for encrypted capsules, unlock readiness, and AI-guided emotional context.
+            </p>
           </div>
 
-          <div className="dashboard-mini-stats">
-            <article>
-              <span>Total</span>
-              <strong>{capsules.length}</strong>
-            </article>
-            <article>
-              <span>Locked</span>
-              <strong>{locked}</strong>
-            </article>
-            <article>
-              <span>Released</span>
-              <strong>{released}</strong>
-            </article>
+          <div className="dashboard-analytics-controls">
+            <label className="dashboard-searchbar dashboard-searchbar-compact" aria-label="Search capsule vault">
+              <span className="dashboard-search-icon" aria-hidden="true">⌕</span>
+              <input
+                className="dashboard-search-input"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search capsule, emotion, unlock"
+              />
+              {searchQuery ? (
+                <button type="button" className="dashboard-search-clear" aria-label="Clear search" onClick={() => setSearchQuery("")}>
+                  ×
+                </button>
+              ) : null}
+            </label>
+
+            <div className="dashboard-analytics-actions">
+              <Link to="/dashboard/services/capsules" className="store-btn store-btn-primary dashboard-cta-btn">
+                <span className="store-icon" aria-hidden="true">+</span>
+                <span>
+                  <strong>Create capsule</strong>
+                  <small>Store future memory</small>
+                </span>
+              </Link>
+              <Link to="/dashboard/services/ai" className="store-btn store-btn-secondary dashboard-cta-btn">
+                <span className="store-icon" aria-hidden="true">✦</span>
+                <span>
+                  <strong>AI insights</strong>
+                  <small>Review sentiment feed</small>
+                </span>
+              </Link>
+            </div>
+            <p className="dashboard-search-help">{filteredCapsules.length} matching capsule{filteredCapsules.length === 1 ? "" : "s"}</p>
           </div>
-        </div>
+        </header>
 
-        <div className="dashboard-hero-visual" aria-label="Abstract dashboard illustration">
-          <div className="dashboard-hero-card-shell">
-            <div className="dashboard-hero-card-top">
-              <span>Landing page</span>
-              <span className="status-chip">Live</span>
-            </div>
-
-            <div className="dashboard-wave-stage">
-              <span className="dashboard-wave dashboard-wave-one" />
-              <span className="dashboard-wave dashboard-wave-two" />
-              <span className="dashboard-wave dashboard-wave-three" />
-              <div className="dashboard-core-orb" />
-            </div>
-
-            <div className="dashboard-hero-metrics">
-              <div>
-                <span>Encrypted</span>
-                <strong>870</strong>
-              </div>
-              <div>
+        <div className="dashboard-analytics-main">
+          <div className="dashboard-analytics-primary">
+            <div className="dashboard-kpi-strip" role="list" aria-label="Dashboard key metrics">
+              <article className="dashboard-kpi-card kpi-accent-violet" role="listitem">
+                <span>Total Capsules</span>
+                <strong>{capsules.length}</strong>
+                <small>Vault size</small>
+              </article>
+              <article className="dashboard-kpi-card kpi-accent-cyan" role="listitem">
                 <span>Released</span>
-                <strong>400</strong>
-              </div>
+                <strong>{released}</strong>
+                <small>{releaseRate}% unlock rate</small>
+              </article>
+              <article className="dashboard-kpi-card kpi-accent-slate" role="listitem">
+                <span>Locked</span>
+                <strong>{locked}</strong>
+                <small>Pending delivery</small>
+              </article>
+              <article className="dashboard-kpi-card kpi-accent-emerald" role="listitem">
+                <span>Service Health</span>
+                <strong>{serviceHealth}</strong>
+                <small>System state</small>
+              </article>
             </div>
 
-            <div className="dashboard-hero-note">
-              <p>Timed release, secure delivery, and emotional context rendered with a warm dark theme.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="dashboard-grid dashboard-grid-pro">
-        <div className="metric-card">
-          <p>Total Capsules</p>
-          <strong>{capsules.length}</strong>
-        </div>
-        <div className="metric-card">
-          <p>Locked Capsules</p>
-          <strong>{locked}</strong>
-        </div>
-        <div className="metric-card">
-          <p>Released Capsules</p>
-          <strong>{released}</strong>
-        </div>
-        <div className="metric-card">
-          <p>Service Health</p>
-          <strong>Operational</strong>
-        </div>
-
-        <div className="wide-card">
-          <h3>Activity Overview</h3>
-          <p className="activity-overview-copy">Capsules created in the last 24 hours.</p>
-          <div className="activity-overview-card">
-            <div className="activity-overview-meta">
-              <div>
-                <span>Last 24h</span>
-                <strong>{activitySeries.total}</strong>
-              </div>
-              <div>
-                <span>Peak bucket</span>
-                <strong>{activitySeries.peak}</strong>
-              </div>
-            </div>
-
-            <div className="activity-chart" aria-label="Capsule activity chart for the last 24 hours">
-              {activitySeries.bars.map((bar) => (
-                <div key={bar.range} className="activity-chart-bar" title={`${bar.range}: ${bar.count} capsule${bar.count === 1 ? "" : "s"}`}>
-                  <div className="activity-chart-track">
-                    <div className={`activity-chart-fill ${heightClass(bar.height)}`} />
-                  </div>
-                  <span className="activity-chart-count">{bar.count}</span>
-                  <span className="activity-chart-label">{bar.label}</span>
+            <section className="dashboard-profit-card" aria-label="Capsule activity trend">
+              <div className="dashboard-profit-head">
+                <div>
+                  <h3>Activity trend</h3>
+                  <p>Capsules created in the last 24 hours.</p>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
+                <div className="dashboard-profit-meta">
+                  <span>Last 24h</span>
+                  <strong>{activitySeries.total}</strong>
+                </div>
+              </div>
 
-        <div className="wide-card">
-          <h3>Recent Capsule Status</h3>
-          <ul className="status-list">
-            {filteredCapsules.slice(0, 6).map((capsule) => (
-              <li key={capsule.id}>
-                <span>{capsule.title}</span>
-                <span className={`pill ${capsule.status}`}>{capsule.status}</span>
-              </li>
-            ))}
-            {!filteredCapsules.length ? <li>{searchQuery ? "No matching capsules." : "No capsules yet."}</li> : null}
-          </ul>
+              <div className="activity-chart" aria-label="Capsule activity chart for the last 24 hours">
+                {activitySeries.bars.map((bar) => (
+                  <div key={bar.range} className="activity-chart-bar" title={`${bar.range}: ${bar.count} capsule${bar.count === 1 ? "" : "s"}`}>
+                    <div className="activity-chart-track">
+                      <div className={`activity-chart-fill ${heightClass(bar.height)}`} />
+                    </div>
+                    <span className="activity-chart-count">{bar.count}</span>
+                    <span className="activity-chart-label">{bar.label}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <aside className="dashboard-analytics-side" aria-label="Operational snapshot">
+            <article className="dashboard-preview-card">
+              <div className="dashboard-preview-art" aria-hidden="true" />
+              <div className="dashboard-preview-meta">
+                <span>Encrypted delivery</span>
+                <strong>{Math.max(capsules.length * 21, 0)}</strong>
+              </div>
+              <div className="dashboard-preview-meta">
+                <span>Unlock-ready capsules</span>
+                <strong>{released + locked}</strong>
+              </div>
+            </article>
+
+            <article className="dashboard-status-card">
+              <h3>Recent capsule status</h3>
+              <ul className="status-list">
+                {filteredCapsules.slice(0, 5).map((capsule) => (
+                  <li key={capsule.id}>
+                    <span>{capsule.title}</span>
+                    <span className={`pill ${capsule.status}`}>{capsule.status}</span>
+                  </li>
+                ))}
+                {!filteredCapsules.length ? <li>{searchQuery ? "No matching capsules." : "No capsules yet."}</li> : null}
+              </ul>
+            </article>
+          </aside>
         </div>
-      </div>
+      </article>
     </section>
   );
 }
@@ -1527,6 +1544,35 @@ function CapsuleServicePage() {
   const [eventName, setEventName] = useState("");
   const [personName, setPersonName] = useState("");
   const [unlockKey, setUnlockKey] = useState("");
+  const releasedCapsules = capsules.filter((capsule) => capsule.status === "released").length;
+  const lockedCapsules = capsules.filter((capsule) => capsule.status === "locked").length;
+  const pendingAnalysis = capsules.filter((capsule) => typeof capsule.sentimentScore !== "number").length;
+  const nextUnlock = capsules
+    .filter((capsule) => capsule.status === "locked" && capsule.unlockAt)
+    .sort((a, b) => new Date(a.unlockAt || 0).getTime() - new Date(b.unlockAt || 0).getTime())[0];
+  const recentCapsule = capsules
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  const topEmotion = capsules
+    .map((capsule) => capsule.dominantEmotion)
+    .find((emotion): emotion is string => Boolean(emotion)) || "pending";
+  const eventBasedCapsules = capsules.filter((capsule) => Boolean(capsule.unlockEventRules?.type)).length;
+  const dateBasedCapsules = capsules.filter((capsule) => Boolean(capsule.unlockAt)).length;
+  const mediaAttachedCapsules = capsules.filter((capsule) => Boolean(capsule.mediaUrl)).length;
+  const lockedWithoutDate = lockedCapsules - (nextUnlock ? 1 : 0);
+
+  function formatUnlockLabel(capsule: Capsule): string {
+    if (capsule.unlockAt) {
+      return new Date(capsule.unlockAt).toLocaleString();
+    }
+
+    if (capsule.unlockEventRules?.type) {
+      const eventNameLabel = capsule.unlockEventRules.metadata?.eventName ? ` (${capsule.unlockEventRules.metadata?.eventName})` : "";
+      return `${capsule.unlockEventRules.type}${eventNameLabel}`;
+    }
+
+    return "Not scheduled";
+  }
 
   async function onPickMedia(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -1586,135 +1632,266 @@ function CapsuleServicePage() {
   }
 
   return (
-    <section className="service-page capsule-service-page">
-      <h3>Capsule Service</h3>
-      <p>Create a capsule here, then let the AI analysis run immediately after save. You will receive an email when the capsule is created, when analysis is ready, and when it opens.</p>
+    <section className="service-page capsule-service-page capsule-service-premium">
+      <div className="capsule-service-shell">
+        <header className="capsule-service-hero">
+          <div className="capsule-service-headline">
+            <p className="hero-kicker">Capsule service</p>
+            <h3>Create and orchestrate secure memory capsules.</h3>
+            <p>Create capsules, define unlock logic, and monitor AI analysis in one premium workspace.</p>
+          </div>
 
-      <form className="panel-form capsule-form" onSubmit={onSubmit}>
-        <div className="capsule-form-grid">
-          <label>
-            Title
-            <input value={title} onChange={(event) => setTitle(event.target.value)} required />
-          </label>
-          <label>
-            Unlock mode
-            <select value={unlockMode} onChange={(event) => setUnlockMode(event.target.value as "date" | "event")}>
-              <option value="date">Date-based</option>
-              <option value="event">Event-based</option>
-            </select>
-          </label>
-          <label>
-            Unlock day and time
-            <input
-              type="datetime-local"
-              value={unlockAt}
-              onChange={(event) => setUnlockAt(event.target.value)}
-              required={unlockMode === "date"}
-              disabled={unlockMode !== "date"}
-            />
-          </label>
-          <label>
-            Event type
-            <select value={eventType} onChange={(event) => setEventType(event.target.value as UnlockEventRule["type"])} disabled={unlockMode !== "event"}>
-              <option value="birthday">Birthday</option>
-              <option value="exam">Exam</option>
-              <option value="breakup">Breakup</option>
-              <option value="custom">Custom</option>
-            </select>
-          </label>
-          <label>
-            Event date
-            <input
-              type="datetime-local"
-              value={eventDate}
-              onChange={(event) => setEventDate(event.target.value)}
-              required={unlockMode === "event"}
-              disabled={unlockMode !== "event"}
-            />
-          </label>
-          <label>
-            Event name
-            <input
-              value={eventName}
-              onChange={(event) => setEventName(event.target.value)}
-              placeholder="e.g. Final Exam or Her Birthday"
-              disabled={unlockMode !== "event"}
-            />
-          </label>
-          <label>
-            Person name
-            <input
-              value={personName}
-              onChange={(event) => setPersonName(event.target.value)}
-              placeholder="Optional"
-              disabled={unlockMode !== "event"}
-            />
-          </label>
-          <label>
-            Media
-            <input type="file" accept="image/*,video/*,audio/*" onChange={onPickMedia} />
-          </label>
-          <label>
-            Encryption key
-            <input value={unlockKey} onChange={(event) => setUnlockKey(event.target.value)} required minLength={6} />
-          </label>
+          <div className="capsule-service-kpis" role="list" aria-label="Capsule service key metrics">
+            <article className="capsule-service-kpi" role="listitem">
+              <span>Total</span>
+              <strong>{capsules.length}</strong>
+              <small>All capsules</small>
+            </article>
+            <article className="capsule-service-kpi" role="listitem">
+              <span>Locked</span>
+              <strong>{lockedCapsules}</strong>
+              <small>Awaiting unlock</small>
+            </article>
+            <article className="capsule-service-kpi" role="listitem">
+              <span>Released</span>
+              <strong>{releasedCapsules}</strong>
+              <small>Delivered memories</small>
+            </article>
+            <article className="capsule-service-kpi" role="listitem">
+              <span>AI Pending</span>
+              <strong>{pendingAnalysis}</strong>
+              <small>Analysis queue</small>
+            </article>
+          </div>
+        </header>
+
+        <div className="capsule-service-layout">
+          <article className="capsule-service-form-card">
+            <div className="capsule-service-card-head">
+              <h4>Compose capsule</h4>
+              <span>Encryption + timed unlock</span>
+            </div>
+
+            <form className="panel-form capsule-form capsule-form-premium" onSubmit={onSubmit}>
+              <div className="capsule-form-grid capsule-form-grid-premium">
+                <label>
+                  Title
+                  <input value={title} onChange={(event) => setTitle(event.target.value)} required />
+                </label>
+                <label>
+                  Unlock mode
+                  <select value={unlockMode} onChange={(event) => setUnlockMode(event.target.value as "date" | "event")}>
+                    <option value="date">Date-based</option>
+                    <option value="event">Event-based</option>
+                  </select>
+                </label>
+                <label>
+                  Unlock day and time
+                  <input
+                    type="datetime-local"
+                    value={unlockAt}
+                    onChange={(event) => setUnlockAt(event.target.value)}
+                    required={unlockMode === "date"}
+                    disabled={unlockMode !== "date"}
+                  />
+                </label>
+                <label>
+                  Event type
+                  <select value={eventType} onChange={(event) => setEventType(event.target.value as UnlockEventRule["type"])} disabled={unlockMode !== "event"}>
+                    <option value="birthday">Birthday</option>
+                    <option value="exam">Exam</option>
+                    <option value="breakup">Breakup</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </label>
+                <label>
+                  Event date
+                  <input
+                    type="datetime-local"
+                    value={eventDate}
+                    onChange={(event) => setEventDate(event.target.value)}
+                    required={unlockMode === "event"}
+                    disabled={unlockMode !== "event"}
+                  />
+                </label>
+                <label>
+                  Event name
+                  <input
+                    value={eventName}
+                    onChange={(event) => setEventName(event.target.value)}
+                    placeholder="e.g. Final Exam or Her Birthday"
+                    disabled={unlockMode !== "event"}
+                  />
+                </label>
+                <label>
+                  Person name
+                  <input
+                    value={personName}
+                    onChange={(event) => setPersonName(event.target.value)}
+                    placeholder="Optional"
+                    disabled={unlockMode !== "event"}
+                  />
+                </label>
+                <label>
+                  Media
+                  <input type="file" accept="image/*,video/*,audio/*" onChange={onPickMedia} />
+                </label>
+                <label>
+                  Encryption key
+                  <input value={unlockKey} onChange={(event) => setUnlockKey(event.target.value)} required minLength={6} />
+                </label>
+              </div>
+
+              {mediaName ? <p className="success-text">Selected media: {mediaName}</p> : null}
+
+              <label className="capsule-body-field">
+                Body
+                <textarea value={body} onChange={(event) => setBody(event.target.value)} required placeholder="Write the memory you want stored in the capsule" />
+              </label>
+
+              <div className="capsule-form-footer">
+                <p className="capsule-analysis-note">Sentiment and content analysis runs automatically after creation.</p>
+                <button className="btn btn-primary capsule-submit-btn" disabled={loading || !title || !body || !unlockKey}>{loading ? "Saving..." : "Create Capsule"}</button>
+              </div>
+            </form>
+
+            {error ? <p className="error-text">{error}</p> : null}
+          </article>
+
+          <div className="capsule-service-vault-column">
+            <article className="capsule-service-list-card">
+              <div className="capsule-service-card-head">
+                <h4>Capsule vault</h4>
+                <span>{capsules.length} total entries</span>
+              </div>
+
+              <div className="table-card capsule-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Media</th>
+                      <th>Status</th>
+                      <th>Unlock</th>
+                      <th>AI</th>
+                      <th>Emotion</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {capsules.map((capsule) => (
+                      <tr key={capsule.id}>
+                        <td>{capsule.title}</td>
+                        <td>{capsule.mediaUrl ? "Attached" : "-"}</td>
+                        <td><span className={`pill ${capsule.status}`}>{capsule.status}</span></td>
+                        <td>{formatUnlockLabel(capsule)}</td>
+                        <td>{typeof capsule.sentimentScore === "number" ? capsule.sentimentScore.toFixed(2) : "Pending"}</td>
+                        <td>{capsule.emotionLabels?.length ? capsule.emotionLabels.join(", ") : "Pending"}</td>
+                        <td>
+                          <div className="capsule-row-actions">
+                            <Link to={`/dashboard/services/capsules/${capsule.id}`} className="btn btn-primary capsule-detail-link">
+                              View
+                            </Link>
+                            <button
+                              type="button"
+                              className="inline-btn"
+                              onClick={() => onDeleteCapsule(capsule.id, capsule.title)}
+                              disabled={loading}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="capsule-mobile-list" aria-label="Capsule list mobile view">
+                {capsules.map((capsule) => (
+                  <article key={`mobile-${capsule.id}`} className="capsule-mobile-item">
+                    <div className="capsule-mobile-item-head">
+                      <h5>{capsule.title}</h5>
+                      <span className={`pill ${capsule.status}`}>{capsule.status}</span>
+                    </div>
+                    <p><strong>Unlock:</strong> {formatUnlockLabel(capsule)}</p>
+                    <p><strong>AI:</strong> {typeof capsule.sentimentScore === "number" ? capsule.sentimentScore.toFixed(2) : "Pending"}</p>
+                    <p><strong>Emotion:</strong> {capsule.emotionLabels?.length ? capsule.emotionLabels.join(", ") : "Pending"}</p>
+                    <div className="capsule-row-actions">
+                      <Link to={`/dashboard/services/capsules/${capsule.id}`} className="btn btn-primary capsule-detail-link">
+                        View
+                      </Link>
+                      <button
+                        type="button"
+                        className="inline-btn"
+                        onClick={() => onDeleteCapsule(capsule.id, capsule.title)}
+                        disabled={loading}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </article>
+
+            <article className="capsule-service-insights-card" aria-label="Capsule insights">
+              <div className="capsule-service-card-head">
+                <h4>Vault insights</h4>
+                <span>Important details</span>
+              </div>
+              <ul className="capsule-insight-list">
+                <li>
+                  <span>Next unlock</span>
+                  <strong>{nextUnlock ? new Date(nextUnlock.unlockAt as string).toLocaleString() : "No upcoming date unlock"}</strong>
+                </li>
+                <li>
+                  <span>Most recent capsule</span>
+                  <strong>{recentCapsule ? recentCapsule.title : "No capsules yet"}</strong>
+                </li>
+                <li>
+                  <span>Dominant emotion trend</span>
+                  <strong>{topEmotion}</strong>
+                </li>
+                <li>
+                  <span>Security reminder</span>
+                  <strong>Keep your encryption key safe to unlock locked capsules.</strong>
+                </li>
+              </ul>
+            </article>
+
+            <article className="capsule-service-summary-card" aria-label="Vault health summary">
+              <div className="capsule-service-card-head">
+                <h4>Vault health</h4>
+                <span>Current composition</span>
+              </div>
+
+              <div className="capsule-summary-grid">
+                <div>
+                  <span>Date unlocks</span>
+                  <strong>{dateBasedCapsules}</strong>
+                </div>
+                <div>
+                  <span>Event unlocks</span>
+                  <strong>{eventBasedCapsules}</strong>
+                </div>
+                <div>
+                  <span>Media attached</span>
+                  <strong>{mediaAttachedCapsules}</strong>
+                </div>
+                <div>
+                  <span>Locked without date</span>
+                  <strong>{Math.max(lockedWithoutDate, 0)}</strong>
+                </div>
+              </div>
+
+              <p className="capsule-summary-note">
+                Use the remaining space to monitor how your vault is evolving, then add a new capsule or review one with a near-term unlock.
+              </p>
+            </article>
+          </div>
         </div>
-
-        {mediaName ? <p className="success-text">Selected media: {mediaName}</p> : null}
-
-        <label className="capsule-body-field">
-          Body
-          <textarea value={body} onChange={(event) => setBody(event.target.value)} required placeholder="Write the memory you want stored in the capsule" />
-        </label>
-
-        <p className="capsule-analysis-note">Sentiment and content analysis will be performed automatically on the body after creation.</p>
-
-        <button className="btn btn-primary" disabled={loading || !title || !body || !unlockKey}>{loading ? "Saving..." : "Create Capsule"}</button>
-      </form>
-
-      {error ? <p className="error-text">{error}</p> : null}
-
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Media</th>
-              <th>Status</th>
-              <th>Unlock</th>
-              <th>AI</th>
-              <th>Emotion</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {capsules.map((capsule) => (
-              <tr key={capsule.id}>
-                <td>{capsule.title}</td>
-                <td>{capsule.mediaUrl ? "Attached" : "-"}</td>
-                <td><span className={`pill ${capsule.status}`}>{capsule.status}</span></td>
-                <td>{capsule.unlockAt || "-"}</td>
-                <td>{typeof capsule.sentimentScore === "number" ? capsule.sentimentScore.toFixed(2) : "Pending"}</td>
-                <td>{capsule.emotionLabels?.length ? capsule.emotionLabels.join(", ") : "Pending"}</td>
-                <td>
-                  <div className="capsule-row-actions">
-                    <Link to={`/dashboard/services/capsules/${capsule.id}`} className="btn btn-primary capsule-detail-link">
-                      View
-                    </Link>
-                    <button
-                      type="button"
-                      className="inline-btn"
-                      onClick={() => onDeleteCapsule(capsule.id, capsule.title)}
-                      disabled={loading}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </section>
   );
@@ -2322,70 +2499,79 @@ function RecommendationServicePage() {
   const visibleUnlocks = viewMode === "ideas" ? [] : unlockRecommendations;
 
   return (
-    <section className="service-page recommendation-page">
-      <div className="recommendation-topbar">
-        <div>
-          <h3>Recommendations & Suggestions</h3>
-          <p>Get smart ideas for creating new capsules and contextual suggestions for unlocking preserved capsules.</p>
-        </div>
-        <div className="recommendation-actions">
-          <button type="button" className={viewMode === "all" ? "inline-btn active" : "inline-btn"} onClick={() => setViewMode("all")}>All</button>
-          <button type="button" className={viewMode === "ideas" ? "inline-btn active" : "inline-btn"} onClick={() => setViewMode("ideas")}>Create Ideas</button>
-          <button type="button" className={viewMode === "unlock" ? "inline-btn active" : "inline-btn"} onClick={() => setViewMode("unlock")}>Unlock Advice</button>
-        </div>
-      </div>
-
-      <div className="recommendation-grid">
-        <article className="recommendation-card recommendation-ideas">
-          <div className="recommendation-head">
-            <h4>New Capsule Ideas</h4>
-            <Link to="/dashboard/services/capsules" className="store-btn store-btn-primary recommendation-create-btn">
-              <span className="store-icon" aria-hidden="true">+</span>
-              <span>
-                <strong>Create capsule</strong>
-                <small>Use an idea</small>
-              </span>
-            </Link>
+    <section className="service-page recommendation-page recommendation-page-premium">
+      <div className="recommendation-shell">
+        <div className="recommendation-topbar recommendation-topbar-premium">
+          <div>
+            <p className="hero-kicker">Recommendation center</p>
+            <h3>Recommendations & Suggestions</h3>
+            <p>Get smart ideas for creating new capsules and contextual suggestions for unlocking preserved capsules.</p>
           </div>
-
-          <ul className="recommendation-list">
-            {visibleIdeas.map((idea) => (
-              <li key={idea.title}>
-                <div>
-                  <strong>{idea.title}</strong>
-                  <p>{idea.prompt}</p>
-                  <small>{idea.hint}</small>
-                </div>
-                <span className="recommendation-tag">{idea.tag}</span>
-              </li>
-            ))}
-            {!visibleIdeas.length ? <li className="recommendation-empty">Create suggestions hidden by filter.</li> : null}
-          </ul>
-        </article>
-
-        <article className="recommendation-card recommendation-unlock">
-          <div className="recommendation-head">
-            <h4>Unlock Recommendations</h4>
-            <span>{lockedCapsules.length} preserved capsule{lockedCapsules.length === 1 ? "" : "s"}</span>
+          <div className="recommendation-actions">
+            <button type="button" className={viewMode === "all" ? "inline-btn active" : "inline-btn"} onClick={() => setViewMode("all")}>All</button>
+            <button type="button" className={viewMode === "ideas" ? "inline-btn active" : "inline-btn"} onClick={() => setViewMode("ideas")}>Create Ideas</button>
+            <button type="button" className={viewMode === "unlock" ? "inline-btn active" : "inline-btn"} onClick={() => setViewMode("unlock")}>Unlock Advice</button>
           </div>
+        </div>
 
-          <ul className="recommendation-list">
-            {visibleUnlocks.map((item) => (
-              <li key={item.id}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <p>{item.suggestion}</p>
-                  <small>{item.unlockAt ? `Unlock at ${new Date(item.unlockAt).toLocaleString()}` : "No unlock date set"}</small>
-                </div>
-                <div className="recommendation-cta">
-                  <span className={`recommendation-tag recommendation-${item.urgency.toLowerCase()}`}>{item.urgency}</span>
-                  <Link to={`/dashboard/services/capsules/${item.id}`} className="inline-btn">Open</Link>
-                </div>
-              </li>
-            ))}
-            {!visibleUnlocks.length ? <li className="recommendation-empty">Unlock recommendations hidden by filter.</li> : null}
-          </ul>
-        </article>
+        <div className="recommendation-grid recommendation-grid-premium">
+          <article className="recommendation-card recommendation-ideas recommendation-panel-main">
+            <div className="recommendation-head">
+              <h4>New Capsule Ideas</h4>
+              <Link to="/dashboard/services/capsules" className="store-btn store-btn-primary recommendation-create-btn">
+                <span className="store-icon" aria-hidden="true">+</span>
+                <span>
+                  <strong>Create capsule</strong>
+                  <small>Use an idea</small>
+                </span>
+              </Link>
+            </div>
+
+            <ul className="recommendation-list">
+              {visibleIdeas.map((idea) => (
+                <li key={idea.title} className="recommendation-item">
+                  <div className="recommendation-item-copy">
+                    <strong>{idea.title}</strong>
+                    <p>{idea.prompt}</p>
+                    <small>{idea.hint}</small>
+                  </div>
+                  <span className="recommendation-tag">{idea.tag}</span>
+                </li>
+              ))}
+              {!visibleIdeas.length ? <li className="recommendation-empty">Create suggestions hidden by filter.</li> : null}
+            </ul>
+          </article>
+
+          <article className="recommendation-card recommendation-unlock recommendation-panel-side">
+            <div className="recommendation-head">
+              <h4>Unlock Recommendations</h4>
+              <span>{lockedCapsules.length} preserved capsule{lockedCapsules.length === 1 ? "" : "s"}</span>
+            </div>
+
+            <ul className="recommendation-list">
+              {visibleUnlocks.map((item) => (
+                <li key={item.id} className="recommendation-item recommendation-unlock-item">
+                  <div className="recommendation-item-copy">
+                    <strong>{item.title}</strong>
+                    <p>{item.suggestion}</p>
+                    <small>{item.unlockAt ? `Unlock at ${new Date(item.unlockAt).toLocaleString()}` : "No unlock date set"}</small>
+                  </div>
+                  <div className="recommendation-cta">
+                    <span className={`recommendation-tag recommendation-${item.urgency.toLowerCase()}`}>{item.urgency}</span>
+                    <Link to={`/dashboard/services/capsules/${item.id}`} className="inline-btn">Open</Link>
+                  </div>
+                </li>
+              ))}
+              {!visibleUnlocks.length ? <li className="recommendation-empty">Unlock recommendations hidden by filter.</li> : null}
+            </ul>
+          </article>
+        </div>
+
+        <aside className="recommendation-summary-card" aria-label="Recommendation summary">
+          <p>Dominant emotional context</p>
+          <strong>{topEmotion}</strong>
+          <span>{lockedCapsules.length} locked capsule{lockedCapsules.length === 1 ? "" : "s"} currently being monitored for unlock advice.</span>
+        </aside>
       </div>
     </section>
   );
@@ -2399,12 +2585,31 @@ function ProfilePage() {
   const [profilePicUrl, setProfilePicUrl] = useState(user?.profilePicUrl || "");
   const [profilePicName, setProfilePicName] = useState("");
   const [saved, setSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     setDisplayName(user?.fullName || "SoulSafe User");
     setBio(user?.bio || "");
     setProfilePicUrl(user?.profilePicUrl || "");
+    setProfilePicName("");
+    setIsEditing(false);
   }, [user]);
+
+  function onStartEdit(): void {
+    clearError();
+    setSaved(false);
+    setIsEditing(true);
+  }
+
+  function onCancelEdit(): void {
+    setDisplayName(user?.fullName || "SoulSafe User");
+    setBio(user?.bio || "");
+    setProfilePicUrl(user?.profilePicUrl || "");
+    setProfilePicName("");
+    setSaved(false);
+    clearError();
+    setIsEditing(false);
+  }
 
   async function onPickProfilePic(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -2432,18 +2637,19 @@ function ProfilePage() {
       localStorage.setItem("soulsafe_display_name", displayName);
       localStorage.setItem("soulsafe_timezone", timezone);
       setSaved(true);
+      setIsEditing(false);
     } catch {
       // Error shown from context.
     }
   }
 
   return (
-    <section className="service-page profile-page">
-      <div className="profile-page-header">
+    <section className="service-page profile-page profile-page-premium">
+      <div className="profile-page-header profile-page-header-premium">
         <div>
           <p className="hero-kicker">Dashboard profile</p>
           <h3>User Profile Management</h3>
-          <p>Update your avatar, public display name, bio, and local preferences.</p>
+          <p>See your profile details, then switch to edit mode when you want to update anything.</p>
         </div>
         <div className="profile-avatar-panel">
           {profilePicUrl ? <img src={profilePicUrl} alt={displayName} className="profile-avatar" /> : <span className="profile-avatar profile-avatar-fallback">{displayName.slice(0, 1).toUpperCase()}</span>}
@@ -2454,11 +2660,11 @@ function ProfilePage() {
         </div>
       </div>
 
-      <form className="panel-form profile-form" onSubmit={onSubmit}>
+      <form className="panel-form profile-form profile-form-premium" onSubmit={onSubmit}>
         <div className="profile-grid">
           <label>
             Display name
-            <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required />
+            <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required disabled={!isEditing} />
           </label>
           <label>
             Email
@@ -2466,11 +2672,11 @@ function ProfilePage() {
           </label>
           <label>
             Timezone
-            <input value={timezone} onChange={(event) => setTimezone(event.target.value)} />
+            <input value={timezone} onChange={(event) => setTimezone(event.target.value)} disabled={!isEditing} />
           </label>
           <label>
             Profile picture
-            <input type="file" accept="image/*" onChange={onPickProfilePic} />
+            <input type="file" accept="image/*" onChange={onPickProfilePic} disabled={!isEditing} />
           </label>
         </div>
 
@@ -2478,16 +2684,27 @@ function ProfilePage() {
 
         <label className="profile-bio-field">
           Bio
-          <textarea value={bio} onChange={(event) => setBio(event.target.value)} placeholder="Tell people what this profile is about" />
+          <textarea value={bio} onChange={(event) => setBio(event.target.value)} placeholder="Tell people what this profile is about" disabled={!isEditing} />
         </label>
 
         {error ? <p className="error-text">{error}</p> : null}
 
         <div className="profile-actions">
-          <button className="btn btn-primary" disabled={loading}>
-            {loading ? "Saving..." : "Save Profile"}
-          </button>
-          <p className="profile-hint">The header avatar and name update immediately after saving.</p>
+          {!isEditing ? (
+            <button type="button" className="btn btn-primary" onClick={onStartEdit}>
+              Edit Profile
+            </button>
+          ) : (
+            <>
+              <button className="btn btn-primary" disabled={loading}>
+                {loading ? "Saving..." : "Save Profile"}
+              </button>
+              <button type="button" className="inline-btn" onClick={onCancelEdit} disabled={loading}>
+                Cancel
+              </button>
+            </>
+          )}
+          <p className="profile-hint">{isEditing ? "Editing is active. Save to apply updates." : "View mode is active. Click Edit Profile to update your details."}</p>
         </div>
 
         {saved ? <p className="success-text">Profile updated.</p> : null}
