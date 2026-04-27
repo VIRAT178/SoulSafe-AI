@@ -611,165 +611,110 @@ function WelcomePage() {
   const [isWelcomeNavOpen, setIsWelcomeNavOpen] = useState(false);
 
   const navItems = [
-    { label: "Home", to: "/login" },
-    { label: "About", to: "/login" },
-    { label: "Features", to: "/login" },
-    { label: "Support", to: "/login" },
-    { label: "FAQ", to: "/login" }
-  ];
-
-  const featureCards = [
-    { title: "Encrypted Memories", body: "Private by default with layered access controls." },
-    { title: "Smart Release", body: "Time-locked delivery for messages that matter." },
-    { title: "AI Context", body: "Emotional insights that deepen every capsule." }
-  ];
-
-  const premiumMetrics = [
-    { label: "Capsules Secured", value: "1.2M+" },
-    { label: "Auto Unlock Rules", value: "48" },
-    { label: "AI Context Accuracy", value: "96.4%" }
+    { label: "Home", to: "/" },
+    { label: "Services", to: "/dashboard/services/capsules" },
+    { label: "About us", to: "/about" },
+    { label: "Contact us", to: "/about#support" }
   ];
 
   return (
-    <div className="welcome-shell welcome-premium" id="home">
-      <div className="welcome-backdrop" aria-hidden="true">
-        <div className="welcome-sky" />
-        <div className="welcome-glow glow-left" />
-        <div className="welcome-glow glow-right" />
-        <div className="welcome-premium-grid" />
-      </div>
+    <div className="reference-page" id="home">
+      <div className="reference-bg-glow reference-bg-glow-left" aria-hidden="true" />
+      <div className="reference-bg-glow reference-bg-glow-right" aria-hidden="true" />
 
-      <header className="welcome-topbar">
-        <Link to="/login" className="welcome-brand" aria-label="SoulSafe login">
-          <span className="brand-mark">S</span>
-          <span className="brand-copy">
-            <strong>SoulSafe</strong>
-            <span>AI memory capsules</span>
-          </span>
-        </Link>
-
-        <nav className={isWelcomeNavOpen ? "welcome-nav open" : "welcome-nav"} aria-label="Primary navigation">
-          {navItems.map((item) => (
-            <Link key={item.label} to={item.to} onClick={() => setIsWelcomeNavOpen(false)}>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="welcome-actions">
-          <button
-            type="button"
-            className="welcome-menu-toggle"
-            aria-label="Toggle welcome navigation"
-            aria-expanded={isWelcomeNavOpen ? "true" : "false"}
-            onClick={() => setIsWelcomeNavOpen((current) => !current)}
-          >
-            <span />
-            <span />
-            <span />
-          </button>
-          <Link to="/login" className="btn btn-ghost welcome-login-link">
-            Login
+      <section className="reference-hero-card" aria-label="SoulSafe hero">
+        <header className="reference-hero-topbar">
+          <Link to="/" className="reference-brand" aria-label="SoulSafe home">
+            <span className="reference-brand-mark" aria-hidden="true">
+              <span />
+              <span />
+            </span>
+            <span className="reference-brand-copy">
+              <strong>SoulSafe</strong>
+              <small>AI Memory Platform</small>
+            </span>
           </Link>
+
+          <nav className={isWelcomeNavOpen ? "reference-nav open" : "reference-nav"} aria-label="Primary navigation">
+            {navItems.map((item) => (
+              <Link key={item.label} to={item.to} onClick={() => setIsWelcomeNavOpen(false)}>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="reference-actions">
+            <button
+              type="button"
+              className="reference-menu-toggle"
+              aria-label="Toggle welcome navigation"
+              aria-expanded={isWelcomeNavOpen ? "true" : "false"}
+              onClick={() => setIsWelcomeNavOpen((current) => !current)}
+            >
+              <span />
+              <span />
+              <span />
+            </button>
+
+            <Link to="/register" className="reference-signup-btn">
+              Sign up
+            </Link>
+          </div>
+        </header>
+
+        <div className="reference-hero-layout">
+          <section className="reference-copy-block">
+            <p className="reference-kicker">Secure Emotional Capsules</p>
+            <h1>
+              <span>Preserve</span> memories
+              <br />
+              with precision
+            </h1>
+            <p>
+              SoulSafe helps you write private capsules, lock them with encryption, and release them on meaningful
+              dates with AI-powered emotional insights.
+            </p>
+
+            <div className="reference-cta-group">
+              <Link to="/register" className="reference-cta-btn">Create your capsule</Link>
+              <Link to="/login" className="reference-cta-btn reference-cta-btn-secondary">Open dashboard</Link>
+            </div>
+
+            <div className="reference-metric-row" aria-label="SoulSafe highlights">
+              <article>
+                <strong>End-to-end</strong>
+                <span>Encryption</span>
+              </article>
+              <article>
+                <strong>AI-ready</strong>
+                <span>Sentiment insights</span>
+              </article>
+              <article>
+                <strong>Smart release</strong>
+                <span>Date or event unlock</span>
+              </article>
+            </div>
+          </section>
+
+          <section className="reference-scene" aria-label="Futuristic graphic showcase">
+            <div className="reference-grid-room" aria-hidden="true">
+              <div className="reference-grid-floor" />
+              <div className="reference-grid-wall" />
+            </div>
+
+            <div className="reference-loop-shape" aria-hidden="true" />
+            <div className="reference-ring reference-ring-one" aria-hidden="true" />
+            <div className="reference-ring reference-ring-two" aria-hidden="true" />
+            <div className="reference-ring reference-ring-three" aria-hidden="true" />
+
+            <article className="reference-scene-card" aria-label="Live capsule status">
+              <p>Capsule Sync</p>
+              <strong>System online</strong>
+              <span>3 capsules scheduled for release this week</span>
+            </article>
+          </section>
         </div>
-      </header>
-
-      <main className="welcome-hero" id="app">
-        <section className="welcome-copy">
-          <p className="hero-kicker">Premium Memory Platform</p>
-          <h1>Design your future messages in a private AI-native vault.</h1>
-          <p className="hero-description">
-            SoulSafe combines encryption, release orchestration, and emotional analysis into one elegant control
-            surface for meaningful moments.
-          </p>
-
-          <div className="hero-cta-row">
-            <Link to="/register" className="store-btn store-btn-primary">
-              <span className="store-icon" aria-hidden="true">✦</span>
-              <span>
-                <strong>Create Account</strong>
-                <small>Start your capsule space</small>
-              </span>
-            </Link>
-            <Link to="/login" className="store-btn store-btn-secondary">
-              <span className="store-icon" aria-hidden="true">→</span>
-              <span>
-                <strong>Open Dashboard</strong>
-                <small>Continue your workflow</small>
-              </span>
-            </Link>
-          </div>
-
-          <div className="welcome-premium-metrics" aria-label="Platform metrics">
-            {premiumMetrics.map((metric) => (
-              <article key={metric.label} className="welcome-premium-metric-card">
-                <strong>{metric.value}</strong>
-                <span>{metric.label}</span>
-              </article>
-            ))}
-          </div>
-
-          <div className="hero-features" id="features">
-            {featureCards.map((feature) => (
-              <article key={feature.title} className="feature-pill-card">
-                <h2>{feature.title}</h2>
-                <p>{feature.body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="welcome-showcase welcome-premium-showcase" id="team" aria-label="App showcase">
-          <article className="welcome-premium-panel welcome-premium-panel-main">
-            <div className="welcome-premium-panel-head">
-              <span>Control Center</span>
-              <span className="status-chip">Synced</span>
-            </div>
-            <h3>Capsule Operations</h3>
-            <p>Manage lock windows, event triggers, and AI context from a single elegant workspace.</p>
-
-            <div className="welcome-premium-progress" role="img" aria-label="Capsule security confidence">
-              <span className="welcome-premium-progress-fill" />
-            </div>
-
-            <div className="welcome-premium-list">
-              <div>
-                <strong>+45</strong>
-                <small>Capsules this month</small>
-              </div>
-              <div>
-                <strong>17</strong>
-                <small>Event unlock rules</small>
-              </div>
-              <div>
-                <strong>0</strong>
-                <small>Security incidents</small>
-              </div>
-            </div>
-          </article>
-
-          <article className="welcome-premium-panel welcome-premium-panel-side">
-            <h4>Recent Intelligence</h4>
-            <ul>
-              <li>
-                <span>Sentiment Batch</span>
-                <strong>Ready</strong>
-              </li>
-              <li>
-                <span>Unlock Advice</span>
-                <strong>Queued</strong>
-              </li>
-              <li>
-                <span>Delivery Sync</span>
-                <strong>Live</strong>
-              </li>
-            </ul>
-          </article>
-
-          <div className="welcome-premium-orb" aria-hidden="true" />
-          <div className="welcome-premium-orb welcome-premium-orb-alt" aria-hidden="true" />
-        </section>
-      </main>
+      </section>
     </div>
   );
 }
@@ -1329,6 +1274,15 @@ function DashboardLayout() {
 function DashboardHomePage() {
   const { capsules } = useAppContext();
   const [searchQuery, setSearchQuery] = useState("");
+  const [motionTone, setMotionTone] = useState<"calm" | "energetic">(() => {
+    const savedTone = localStorage.getItem("soulsafe_dashboard_motion_tone");
+    return savedTone === "calm" ? "calm" : "energetic";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("soulsafe_dashboard_motion_tone", motionTone);
+  }, [motionTone]);
+
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredCapsules = useMemo(() => {
     if (!normalizedQuery) {
@@ -1394,7 +1348,7 @@ function DashboardHomePage() {
   }, [capsules]);
 
   return (
-    <section className="dashboard-home dashboard-home-analytics">
+    <section className={`dashboard-home dashboard-home-analytics motion-tone-${motionTone}`}>
       <article className="dashboard-analytics-shell" aria-label="SoulSafe analytics dashboard">
         <header className="dashboard-analytics-head">
           <div className="dashboard-analytics-title">
@@ -1436,6 +1390,23 @@ function DashboardHomePage() {
                   <small>Review sentiment feed</small>
                 </span>
               </Link>
+            </div>
+
+            <div className="dashboard-tone-switch" role="group" aria-label="Animation mood">
+              <button
+                type="button"
+                className={motionTone === "calm" ? "dashboard-tone-btn active" : "dashboard-tone-btn"}
+                onClick={() => setMotionTone("calm")}
+              >
+                Calm cinematic
+              </button>
+              <button
+                type="button"
+                className={motionTone === "energetic" ? "dashboard-tone-btn active" : "dashboard-tone-btn"}
+                onClick={() => setMotionTone("energetic")}
+              >
+                Energetic premium
+              </button>
             </div>
             <p className="dashboard-search-help">{filteredCapsules.length} matching capsule{filteredCapsules.length === 1 ? "" : "s"}</p>
           </div>
@@ -1678,60 +1649,92 @@ function CapsuleServicePage() {
                   Title
                   <input value={title} onChange={(event) => setTitle(event.target.value)} required />
                 </label>
-                <label>
-                  Unlock mode
-                  <select value={unlockMode} onChange={(event) => setUnlockMode(event.target.value as "date" | "event")}>
-                    <option value="date">Date-based</option>
-                    <option value="event">Event-based</option>
-                  </select>
-                </label>
-                <label>
-                  Unlock day and time
-                  <input
-                    type="datetime-local"
-                    value={unlockAt}
-                    onChange={(event) => setUnlockAt(event.target.value)}
-                    required={unlockMode === "date"}
-                    disabled={unlockMode !== "date"}
-                  />
-                </label>
-                <label>
-                  Event type
-                  <select value={eventType} onChange={(event) => setEventType(event.target.value as UnlockEventRule["type"])} disabled={unlockMode !== "event"}>
-                    <option value="birthday">Birthday</option>
-                    <option value="exam">Exam</option>
-                    <option value="breakup">Breakup</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                </label>
-                <label>
-                  Event date
-                  <input
-                    type="datetime-local"
-                    value={eventDate}
-                    onChange={(event) => setEventDate(event.target.value)}
-                    required={unlockMode === "event"}
-                    disabled={unlockMode !== "event"}
-                  />
-                </label>
-                <label>
-                  Event name
-                  <input
-                    value={eventName}
-                    onChange={(event) => setEventName(event.target.value)}
-                    placeholder="e.g. Final Exam or Her Birthday"
-                    disabled={unlockMode !== "event"}
-                  />
-                </label>
-                <label>
-                  Person name
-                  <input
-                    value={personName}
-                    onChange={(event) => setPersonName(event.target.value)}
-                    placeholder="Optional"
-                    disabled={unlockMode !== "event"}
-                  />
-                </label>
+                <div className="capsule-mode-field">
+                  <span>Unlock mode</span>
+                  <div className="capsule-mode-toggle" role="group" aria-label="Choose unlock mode">
+                    <button
+                      type="button"
+                      className={unlockMode === "date" ? "capsule-mode-btn active" : "capsule-mode-btn"}
+                      onClick={() => setUnlockMode("date")}
+                      aria-pressed={unlockMode === "date"}
+                    >
+                      Date-based
+                    </button>
+                    <button
+                      type="button"
+                      className={unlockMode === "event" ? "capsule-mode-btn active" : "capsule-mode-btn"}
+                      onClick={() => setUnlockMode("event")}
+                      aria-pressed={unlockMode === "event"}
+                    >
+                      Event-based
+                    </button>
+                  </div>
+                  <small className="capsule-mode-hint">
+                    {unlockMode === "date" ? "Capsule unlocks at a specific date and time." : "Capsule unlocks when an event condition is met."}
+                  </small>
+                </div>
+
+                {unlockMode === "date" ? (
+                  <label>
+                    Unlock day and time
+                    <input
+                      type="datetime-local"
+                      value={unlockAt}
+                      onChange={(event) => setUnlockAt(event.target.value)}
+                      required
+                    />
+                  </label>
+                ) : (
+                  <>
+                    <div className="capsule-event-type-field">
+                      <span>Event type</span>
+                      <div className="capsule-event-type-picker" role="radiogroup" aria-label="Choose event type">
+                        {([
+                          { value: "birthday", label: "Birthday" },
+                          { value: "exam", label: "Exam" },
+                          { value: "breakup", label: "Breakup" },
+                          { value: "custom", label: "Custom" }
+                        ] as Array<{ value: UnlockEventRule["type"]; label: string }>).map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={eventType === option.value}
+                            className={eventType === option.value ? "capsule-event-type-btn active" : "capsule-event-type-btn"}
+                            onClick={() => setEventType(option.value)}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <label>
+                      Event date
+                      <input
+                        type="datetime-local"
+                        value={eventDate}
+                        onChange={(event) => setEventDate(event.target.value)}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Event name
+                      <input
+                        value={eventName}
+                        onChange={(event) => setEventName(event.target.value)}
+                        placeholder="e.g. Final Exam or Her Birthday"
+                      />
+                    </label>
+                    <label>
+                      Person name
+                      <input
+                        value={personName}
+                        onChange={(event) => setPersonName(event.target.value)}
+                        placeholder="Optional"
+                      />
+                    </label>
+                  </>
+                )}
                 <label>
                   Media
                   <input type="file" accept="image/*,video/*,audio/*" onChange={onPickMedia} />
@@ -2258,29 +2261,60 @@ function AiServicePage() {
       <div className="ai-controls">
         <label className="ai-search-control">
           <span>Search</span>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title, emotion, status" />
+          <div className="ai-search-wrap">
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title, emotion, status" />
+            {query ? (
+              <button type="button" className="ai-search-clear" onClick={() => setQuery("")} aria-label="Clear search">
+                ×
+              </button>
+            ) : null}
+          </div>
         </label>
 
-        <label>
-          <span>Status</span>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "draft" | "locked" | "released")}>
-            <option value="all">All</option>
-            <option value="draft">Draft</option>
-            <option value="locked">Locked</option>
-            <option value="released">Released</option>
-          </select>
-        </label>
+        <div className="ai-filter-group" role="group" aria-label="Filter by status">
+          <span className="ai-filter-label">Status</span>
+          <div className="ai-filter-pills">
+            {([
+              { value: "all", label: "All" },
+              { value: "draft", label: "Draft" },
+              { value: "locked", label: "Locked" },
+              { value: "released", label: "Released" }
+            ] as Array<{ value: "all" | "draft" | "locked" | "released"; label: string }>).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={statusFilter === option.value ? "ai-filter-pill active" : "ai-filter-pill"}
+                onClick={() => setStatusFilter(option.value)}
+                aria-pressed={statusFilter === option.value}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        <label>
-          <span>Sentiment</span>
-          <select value={sentimentFilter} onChange={(event) => setSentimentFilter(event.target.value as "all" | "positive" | "neutral" | "negative" | "pending")}>
-            <option value="all">All</option>
-            <option value="positive">Positive</option>
-            <option value="neutral">Neutral</option>
-            <option value="negative">Negative</option>
-            <option value="pending">Pending</option>
-          </select>
-        </label>
+        <div className="ai-filter-group" role="group" aria-label="Filter by sentiment">
+          <span className="ai-filter-label">Sentiment</span>
+          <div className="ai-filter-pills">
+            {([
+              { value: "all", label: "All" },
+              { value: "positive", label: "Positive" },
+              { value: "neutral", label: "Neutral" },
+              { value: "negative", label: "Negative" },
+              { value: "pending", label: "Pending" }
+            ] as Array<{ value: "all" | "positive" | "neutral" | "negative" | "pending"; label: string }>).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={sentimentFilter === option.value ? "ai-filter-pill active" : "ai-filter-pill"}
+                onClick={() => setSentimentFilter(option.value)}
+                aria-pressed={sentimentFilter === option.value}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="ai-kpi-grid">
@@ -2370,7 +2404,7 @@ function AiServicePage() {
             <h4>Capsule Analysis Feed</h4>
             <span>{filteredCapsules.length} rows</span>
           </div>
-          <div className="table-card">
+          <div className="table-card ai-table-wrap">
             <table>
               <thead>
                 <tr>
@@ -2400,6 +2434,21 @@ function AiServicePage() {
                 ) : null}
               </tbody>
             </table>
+          </div>
+
+          <div className="ai-mobile-feed" aria-label="AI capsule analysis mobile feed">
+            {filteredCapsules.map((capsule) => (
+              <article key={`ai-mobile-${capsule.id}`} className="ai-mobile-feed-item">
+                <div className="ai-mobile-feed-head">
+                  <h5>{capsule.title}</h5>
+                  <span className={`pill ${capsule.status}`}>{capsule.status}</span>
+                </div>
+                <p><strong>Sentiment:</strong> {typeof capsule.sentimentScore === "number" ? capsule.sentimentScore.toFixed(2) : "Pending"}</p>
+                <p><strong>Emotions:</strong> {capsule.emotionLabels?.length ? capsule.emotionLabels.join(", ") : "Pending"}</p>
+                <Link to={`/dashboard/services/capsules/${capsule.id}`} className="inline-btn">Open</Link>
+              </article>
+            ))}
+            {!filteredCapsules.length ? <p className="capsule-analysis-note">No records match current filters.</p> : null}
           </div>
         </article>
       </div>

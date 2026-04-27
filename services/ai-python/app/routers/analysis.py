@@ -29,6 +29,53 @@ POSITIVE_WORDS = {
     "safe",
     "better",
     "healed",
+    "confidence",
+    "confident",
+    "prepared",
+    "ready",
+    "capable",
+    "optimistic",
+    "optimism",
+    "motivated",
+    "motivation",
+    "focused",
+    "determined",
+    "resilient",
+    "brave",
+    "courage",
+    "courageous",
+    "progress",
+    "improving",
+    "improvement",
+    "achieve",
+    "achievement",
+    "succeed",
+    "success",
+    "successful",
+    "pass",
+    "win",
+    "winning",
+    "faith",
+    "trust",
+    "uplifted",
+    "encouraged",
+    "inspired",
+    "inspiring",
+    "stability",
+    "stable",
+    "secure",
+    "peaceful",
+    "hopeful",
+    "relaxed",
+    "relax",
+    "recover",
+    "recovered",
+    "healing",
+    "calmer",
+    "clarity",
+    "confidently",
+    "preparedness",
+    "strength",
 }
 
 NEGATIVE_WORDS = {
@@ -56,27 +103,144 @@ NEGATIVE_WORDS = {
     "fear",
     "miss",
     "sorry",
+    "scared",
+    "nervous",
+    "terrified",
+    "overwhelmed",
+    "unprepared",
+    "examstress",
+    "worry",
+    "worried",
+    "worries",
+    "worrying",
+    "doubt",
+    "doubts",
+    "doubtful",
+    "failure",
+    "failed",
+    "failing",
+    "fail",
+    "weak",
+    "helpless",
+    "hopeless",
+    "stuck",
+    "confused",
+    "confusion",
+    "frustrated",
+    "frustration",
+    "depressed",
+    "depression",
+    "demotivated",
+    "burnout",
+    "burnedout",
+    "exhausted",
+    "exhaustion",
+    "sleepless",
+    "insomnia",
+    "pressure",
+    "pressured",
+    "trauma",
+    "traumatic",
+    "insecure",
+    "unstable",
+    "chaotic",
+    "shattered",
+    "devastated",
+    "miserable",
+    "terrible",
+    "horrible",
+    "awful",
+    "shame",
+    "ashamed",
+    "guilty",
+    "betrayal",
+    "abandoned",
 }
+
+POSITIVE_ROOTS = {
+    "confiden",
+    "optim",
+    "motiv",
+    "courage",
+    "resilien",
+    "prepare",
+    "improv",
+    "progress",
+    "achiev",
+    "succeed",
+    "heal",
+    "calm",
+    "relax",
+    "hope",
+    "grate",
+    "inspir",
+    "focus",
+    "determin",
+}
+
+NEGATIVE_ROOTS = {
+    "anxi",
+    "stress",
+    "panic",
+    "worr",
+    "scare",
+    "fear",
+    "doubt",
+    "fail",
+    "frustr",
+    "depress",
+    "exhaust",
+    "overwhelm",
+    "regret",
+    "guilt",
+    "hurt",
+    "lonel",
+    "trauma",
+    "insecur",
+    "chaos",
+}
+
+PHRASE_SENTIMENT_CUES: list[tuple[str, float]] = [
+    (r"\bnot\s+(?:prepared|ready|confident)\b", -1.6),
+    (r"\bcan'?t\s+(?:focus|study|sleep|handle)\b", -1.2),
+    (r"\bpanic\s+attack\b", -1.6),
+    (r"\b(?:very|extremely|really)\s+(?:scared|anxious|worried)\b", -1.2),
+    (r"\b(?:full\s+confidence|i\s+will\s+do\s+it|i\s+can\s+do\s+it|believe\s+in\s+me|believe\s+in\s+myself)\b", 1.3),
+    (r"\b(?:i\s+am|i'm)\s+(?:ready|prepared|confident)\b", 1.0),
+    (r"\bkeep\s+going\b", 0.9),
+    (r"\bstay\s+strong\b", 1.0),
+    (r"\bone\s+step\s+at\s+a\s+time\b", 0.8),
+]
 
 NEGATION_WORDS = {"not", "never", "no", "none", "hardly", "rarely", "without"}
 INTENSIFIERS = {"very", "deeply", "extremely", "really", "so", "too", "super", "highly"}
 
 EMOTION_LEXICONS: dict[str, set[str]] = {
-    "joy": {"joy", "happy", "laugh", "smile", "celebrate", "excited", "delight"},
-    "love": {"love", "dear", "beloved", "care", "cherish", "adore", "hug"},
-    "gratitude": {"grateful", "thankful", "appreciate", "blessed", "thanks"},
-    "sadness": {"sad", "grief", "cry", "tears", "hurt", "empty", "lonely", "loss"},
-    "fear": {"fear", "afraid", "anxious", "panic", "worried", "uncertain"},
-    "anger": {"angry", "mad", "furious", "upset", "frustrated", "resent"},
-    "nostalgia": {"remember", "memory", "back then", "used to", "old days", "childhood"},
-    "hope": {"hope", "future", "someday", "believe", "dream", "heal"},
-    "regret": {"regret", "sorry", "wish", "if only", "should have", "could have"},
+    "joy": {
+        "joy", "happy", "laugh", "smile", "celebrate", "excited", "delight", "relief",
+        "uplifted", "cheerful", "positive", "light", "content",
+    },
+    "love": {"love", "dear", "beloved", "care", "cherish", "adore", "hug", "affection", "support"},
+    "gratitude": {"grateful", "thankful", "appreciate", "blessed", "thanks", "gratitude"},
+    "sadness": {
+        "sad", "grief", "cry", "tears", "hurt", "empty", "lonely", "loss", "down", "depressed", "hopeless",
+    },
+    "fear": {
+        "fear", "afraid", "anxious", "panic", "worried", "uncertain", "scared", "nervous", "terrified", "overwhelmed", "pressure",
+    },
+    "anger": {"angry", "mad", "furious", "upset", "frustrated", "resent", "irritated", "annoyed"},
+    "nostalgia": {"remember", "memory", "back then", "used to", "old days", "childhood", "throwback"},
+    "hope": {
+        "hope", "future", "someday", "believe", "dream", "heal", "confidence", "confident", "prepared", "ready", "i will do it", "i can do it", "faith",
+    },
+    "regret": {"regret", "sorry", "wish", "if only", "should have", "could have", "guilt", "ashamed"},
 }
 
 CONTEXT_PATTERNS: dict[str, tuple[str, ...]] = {
     "life-event:birth": ("born", "newborn", "baby", "pregnant", "delivery"),
     "life-event:marriage": ("married", "wedding", "wife", "husband", "engaged", "fiance"),
     "life-event:graduation": ("graduation", "graduated", "degree", "university", "college"),
+    "life-event:exam": ("exam", "semester", "sem", "midterm", "final", "test", "result"),
     "life-event:career": ("job", "promotion", "office", "career", "business", "startup"),
     "life-event:health": ("hospital", "surgery", "diagnosis", "recovery", "therapy", "treatment"),
     "life-event:loss": ("passed away", "funeral", "loss", "grief", "mourning"),
@@ -143,6 +307,43 @@ def _tokenize(text: str) -> list[str]:
     return re.findall(r"[a-zA-Z']+", text.lower())
 
 
+def _token_forms(token: str) -> set[str]:
+    forms = {token}
+
+    if token.endswith("ies") and len(token) > 4:
+        forms.add(f"{token[:-3]}y")
+
+    suffixes = (
+        "ing",
+        "ed",
+        "ly",
+        "ness",
+        "ment",
+        "tion",
+        "sion",
+        "able",
+        "ible",
+        "ers",
+        "er",
+        "es",
+        "s",
+    )
+
+    for suffix in suffixes:
+        if token.endswith(suffix) and len(token) > len(suffix) + 2:
+            forms.add(token[: -len(suffix)])
+
+    return forms
+
+
+def _has_vocab_match(token: str, vocabulary: set[str], roots: set[str]) -> bool:
+    forms = _token_forms(token)
+    if any(form in vocabulary for form in forms):
+        return True
+
+    return any(any(form.startswith(root) for root in roots) for form in forms if len(form) >= 4)
+
+
 def _sentence_sentiment(sentence: str) -> float:
     tokens = _tokenize(sentence)
     if not tokens:
@@ -154,10 +355,23 @@ def _sentence_sentiment(sentence: str) -> float:
         has_negation = any(item in NEGATION_WORDS for item in window)
         intensity = 1.35 if any(item in INTENSIFIERS for item in window) else 1.0
 
-        if token in POSITIVE_WORDS:
+        positive_match = _has_vocab_match(token, POSITIVE_WORDS, POSITIVE_ROOTS)
+        negative_match = _has_vocab_match(token, NEGATIVE_WORDS, NEGATIVE_ROOTS)
+
+        if positive_match and not negative_match:
             score += (-1.0 if has_negation else 1.0) * intensity
-        elif token in NEGATIVE_WORDS:
+        elif negative_match and not positive_match:
             score += (1.0 if has_negation else -1.0) * intensity
+
+    lowered = sentence.lower()
+
+    # Phrase-level cues capture intent that token matching often misses.
+    for pattern, weight in PHRASE_SENTIMENT_CUES:
+        if re.search(pattern, lowered):
+            score += weight
+
+    if "exam" in lowered and re.search(r"\b(?:scared|afraid|anxious|nervous|panic)\b", lowered):
+        score -= 1.1
 
     normalized = score / max(1.0, math.sqrt(len(tokens)))
     return max(-1.0, min(1.0, normalized))
