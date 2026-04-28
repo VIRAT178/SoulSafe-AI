@@ -1,6 +1,13 @@
 server:
   port: 8081
 
+soulsafe:
+  api-base-url: ${SOULSAFE_API_BASE_URL:http://localhost:4000}
+
+wish:
+  scheduler:
+    poll-ms: ${WISH_SCHEDULER_POLL_MS:60000}
+
 management:
   endpoints:
     web:

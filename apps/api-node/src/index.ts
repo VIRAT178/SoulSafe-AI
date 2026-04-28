@@ -4,6 +4,7 @@ import { createApp } from "./app.js";
 import { connectDatastores } from "./services/db.js";
 import { startAiWorker } from "./workers/aiWorker.js";
 import { startUnlockWorker } from "./workers/unlockWorker.js";
+import { startWishWorker } from "./workers/wishWorker.js";
 
 dotenv.config({ path: resolve(process.cwd(), "../../.env") });
 dotenv.config();
@@ -15,6 +16,7 @@ async function bootstrap() {
   await connectDatastores();
   startAiWorker();
   startUnlockWorker();
+  startWishWorker();
 
   app.listen(port, () => {
     console.log(`SoulSafe API listening on port ${port}`);

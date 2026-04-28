@@ -64,11 +64,12 @@ export async function runMongoMigrations(db: Db): Promise<void> {
       additionalProperties: true,
       properties: {
         userId: { bsonType: "string", minLength: 24, maxLength: 24 },
+        type: { enum: ["personal", "wish"] },
         title: { bsonType: "string", minLength: 1, maxLength: 200 },
         encryptedPayload: { bsonType: "string", minLength: 1 },
         encryptionMethod: { bsonType: "string", minLength: 1 },
         mediaUrl: { bsonType: ["string", "null"] },
-        status: { enum: ["draft", "locked", "released"] },
+        status: { enum: ["draft", "locked", "released", "scheduled_for_delivery", "sent", "pending_approval"] },
         unlockAt: { bsonType: ["string", "null"] },
         unlockEventRules: {
           bsonType: ["object", "null"],
@@ -88,6 +89,20 @@ export async function runMongoMigrations(db: Db): Promise<void> {
           }
         },
         unlockKeyHash: { bsonType: ["string", "null"] },
+        recipient: {
+          bsonType: ["object", "null"],
+          additionalProperties: false,
+          properties: {
+            name: { bsonType: "string" },
+            email: { bsonType: "string" },
+            dob: { bsonType: ["string", "null"] }
+          }
+        },
+        occasionType: { enum: ["birthday", "anniversary", "graduation", "custom"] },
+        deliveryMode: { enum: ["auto", "manual_approval"] },
+        emailTemplateId: { bsonType: ["string", "null"] },
+        scheduledAt: { bsonType: ["string", "null"] },
+        sentAt: { bsonType: ["string", "null"] },
         sentimentScore: { bsonType: ["double", "int", "long", "null"] },
         dominantEmotion: { bsonType: ["string", "null"] },
         emotionLabels: {
@@ -147,6 +162,23 @@ export async function runMongoMigrations(db: Db): Promise<void> {
     }
   });
 
+  await ensureCollectionWithValidator(db, "audit_logs", {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["action", "category", "createdAt"],
+      additionalProperties: true,
+      properties: {
+        capsuleId: { bsonType: ["string", "null"] },
+        userId: { bsonType: ["string", "null"] },
+        action: { bsonType: "string", minLength: 1 },
+        category: { bsonType: "string", minLength: 1 },
+        status: { bsonType: ["string", "null"] },
+        details: { bsonType: ["object", "null"] },
+        createdAt: { bsonType: "string" }
+      }
+    }
+  });
+
   await ensureIndex(db, "users", { email: 1 }, { unique: true, name: "users_email_uq" });
   await ensureIndex(db, "capsules", { userId: 1, createdAt: -1 }, { name: "capsules_user_created_idx" });
   await ensureIndex(db, "capsules", { userId: 1, status: 1, unlockAt: 1 }, { name: "capsules_user_status_unlock_idx" });
@@ -156,4 +188,5 @@ export async function runMongoMigrations(db: Db): Promise<void> {
   await ensureIndex(db, "ai_analyses", { capsuleId: 1, analyzedAt: -1 }, { name: "ai_analyses_capsule_date_idx" });
   await ensureIndex(db, "unlock_events", { capsuleId: 1, processedAt: -1 }, { name: "unlock_events_capsule_processed_idx" });
   await ensureIndex(db, "unlock_events", { capsuleId: 1, triggerType: 1, processedAt: -1 }, { name: "unlock_events_capsule_trigger_processed_idx" });
+  await ensureIndex(db, "audit_logs", { capsuleId: 1, createdAt: -1 }, { name: "audit_logs_capsule_created_idx" });
 }

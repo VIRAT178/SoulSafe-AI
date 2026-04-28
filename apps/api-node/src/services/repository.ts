@@ -1,12 +1,24 @@
 import { ObjectId } from "mongodb";
 import {
   aiAnalysesCollection,
+  auditLogsCollection,
   capsulesCollection,
   type CapsuleDoc,
   unlockEventsCollection,
   usersCollection
 } from "./db.js";
 import { verifyPassword } from "./security.js";
+
+export type CapsuleType = "personal" | "wish";
+export type WishOccasionType = "birthday" | "anniversary" | "graduation" | "custom";
+export type WishDeliveryMode = "auto" | "manual_approval";
+export type CapsuleStatus = "draft" | "locked" | "released" | "scheduled_for_delivery" | "sent" | "pending_approval";
+
+export type WishRecipient = {
+  name: string;
+  email: string;
+  dob?: string;
+};
 
 export type UnlockEventRule = {
   type: "birthday" | "exam" | "breakup" | "custom";
@@ -33,13 +45,20 @@ export type UserRecord = {
 export type CapsuleRecord = {
   id: string;
   userId: string;
+  type: CapsuleType;
   title: string;
   encryptedPayload: string;
   encryptionMethod: string;
   mediaUrl?: string;
-  status: "draft" | "locked" | "released";
+  status: CapsuleStatus;
   unlockAt?: string;
   unlockEventRules?: UnlockEventRule;
+  recipient?: WishRecipient;
+  occasionType?: WishOccasionType;
+  deliveryMode?: WishDeliveryMode;
+  emailTemplateId?: string;
+  scheduledAt?: string;
+  sentAt?: string;
   sentimentScore?: number;
   dominantEmotion?: string;
   emotionLabels?: string[];
@@ -97,6 +116,7 @@ function toCapsuleRecord(doc: CapsuleDoc): CapsuleRecord {
   return {
     id: doc._id.toHexString(),
     userId: doc.userId,
+    type: doc.type || "personal",
     title: doc.title,
     encryptedPayload: doc.encryptedPayload,
     encryptionMethod: doc.encryptionMethod,
@@ -104,6 +124,12 @@ function toCapsuleRecord(doc: CapsuleDoc): CapsuleRecord {
     status: doc.status,
     unlockAt: doc.unlockAt,
     unlockEventRules: doc.unlockEventRules,
+    recipient: doc.recipient,
+    occasionType: doc.occasionType,
+    deliveryMode: doc.deliveryMode,
+    emailTemplateId: doc.emailTemplateId,
+    scheduledAt: doc.scheduledAt,
+    sentAt: doc.sentAt,
     sentimentScore: doc.sentimentScore,
     dominantEmotion: doc.dominantEmotion,
     emotionLabels: doc.emotionLabels,
@@ -229,24 +255,49 @@ export async function createCapsule(input: {
   title: string;
   encryptedPayload: string;
   encryptionMethod: string;
+  type?: CapsuleType;
   mediaUrl?: string;
   unlockAt?: string;
   unlockEventRules?: UnlockEventRule;
   unlockKeyHash?: string;
+  recipient?: WishRecipient;
+  occasionType?: WishOccasionType;
+  deliveryMode?: WishDeliveryMode;
+  emailTemplateId?: string;
+  scheduledAt?: string;
+  status?: CapsuleStatus;
 }): Promise<CapsuleRecord> {
   const now = new Date().toISOString();
   const hasEventRule = Boolean(input.unlockEventRules?.type);
+  const capsuleType = input.type || "personal";
+  const resolvedStatus =
+    input.status ||
+    (capsuleType === "wish"
+      ? input.deliveryMode === "manual_approval"
+        ? "pending_approval"
+        : input.scheduledAt
+          ? "scheduled_for_delivery"
+          : "draft"
+      : input.unlockAt || input.unlockKeyHash || hasEventRule
+        ? "locked"
+        : "draft");
   const doc: CapsuleDoc = {
     _id: new ObjectId(),
     userId: input.userId,
+    type: capsuleType,
     title: input.title,
     encryptedPayload: input.encryptedPayload,
     encryptionMethod: input.encryptionMethod,
     mediaUrl: input.mediaUrl,
-    status: input.unlockAt || input.unlockKeyHash || hasEventRule ? "locked" : "draft",
+    status: resolvedStatus,
     unlockAt: input.unlockAt,
     unlockEventRules: input.unlockEventRules,
     unlockKeyHash: input.unlockKeyHash,
+    recipient: input.recipient,
+    occasionType: input.occasionType,
+    deliveryMode: input.deliveryMode,
+    emailTemplateId: input.emailTemplateId,
+    scheduledAt: input.scheduledAt,
     createdAt: now,
     updatedAt: now
   };
@@ -260,12 +311,46 @@ export async function listCapsules(userId: string): Promise<CapsuleRecord[]> {
   return docs.map(toCapsuleRecord);
 }
 
+export async function listWishCapsules(userId: string): Promise<CapsuleRecord[]> {
+  const docs = await capsulesCollection().find({ userId, type: "wish" }).sort({ createdAt: -1 }).toArray();
+  return docs.map(toCapsuleRecord);
+}
+
+export async function listDueWishCapsules(limit = 100): Promise<CapsuleRecord[]> {
+  const now = Date.now();
+  const docs = await capsulesCollection()
+    .find({
+      type: "wish",
+      status: { $in: ["scheduled_for_delivery", "pending_approval"] },
+      scheduledAt: { $exists: true }
+    })
+    .sort({ scheduledAt: 1 })
+    .limit(limit * 3)
+    .toArray();
+
+  const dueDocs = docs
+    .filter((doc) => {
+      if (!doc.scheduledAt) {
+        return false;
+      }
+
+      const scheduledMs = new Date(doc.scheduledAt).getTime();
+      return !Number.isNaN(scheduledMs) && scheduledMs <= now;
+    })
+    .slice(0, limit);
+
+  return dueDocs.map(toCapsuleRecord);
+}
+
 export async function getCapsuleById(capsuleId: string): Promise<CapsuleRecord | null> {
   const doc = await capsulesCollection().findOne({ _id: new ObjectId(capsuleId) });
   return doc ? toCapsuleRecord(doc) : null;
 }
 
-export async function updateCapsule(capsuleId: string, updates: Partial<Pick<CapsuleRecord, "title" | "encryptedPayload" | "encryptionMethod">>): Promise<CapsuleRecord | null> {
+export async function updateCapsule(
+  capsuleId: string,
+  updates: Partial<Pick<CapsuleRecord, "title" | "encryptedPayload" | "encryptionMethod" | "type" | "recipient" | "occasionType" | "deliveryMode" | "emailTemplateId" | "scheduledAt" | "status" | "sentAt" | "mediaUrl" | "unlockAt" | "unlockEventRules">>
+): Promise<CapsuleRecord | null> {
   const result = await capsulesCollection().findOneAndUpdate(
     { _id: new ObjectId(capsuleId) },
     {
@@ -306,6 +391,64 @@ export async function releaseCapsule(capsuleId: string): Promise<CapsuleRecord |
       $set: {
         status: "released",
         updatedAt: new Date().toISOString()
+      }
+    },
+    { returnDocument: "after" }
+  );
+
+  return result ? toCapsuleRecord(result) : null;
+}
+
+export async function markWishCapsulePendingApproval(capsuleId: string): Promise<CapsuleRecord | null> {
+  const result = await capsulesCollection().findOneAndUpdate(
+    {
+      _id: new ObjectId(capsuleId),
+      type: "wish",
+      status: { $in: ["draft", "scheduled_for_delivery", "pending_approval"] }
+    },
+    {
+      $set: {
+        status: "pending_approval",
+        updatedAt: new Date().toISOString()
+      }
+    },
+    { returnDocument: "after" }
+  );
+
+  return result ? toCapsuleRecord(result) : null;
+}
+
+export async function markWishCapsuleScheduled(capsuleId: string): Promise<CapsuleRecord | null> {
+  const result = await capsulesCollection().findOneAndUpdate(
+    {
+      _id: new ObjectId(capsuleId),
+      type: "wish"
+    },
+    {
+      $set: {
+        status: "scheduled_for_delivery",
+        updatedAt: new Date().toISOString()
+      }
+    },
+    { returnDocument: "after" }
+  );
+
+  return result ? toCapsuleRecord(result) : null;
+}
+
+export async function markWishCapsuleSent(capsuleId: string): Promise<CapsuleRecord | null> {
+  const now = new Date().toISOString();
+  const result = await capsulesCollection().findOneAndUpdate(
+    {
+      _id: new ObjectId(capsuleId),
+      type: "wish",
+      status: { $ne: "sent" }
+    },
+    {
+      $set: {
+        status: "sent",
+        sentAt: now,
+        updatedAt: now
       }
     },
     { returnDocument: "after" }
@@ -419,6 +562,26 @@ export async function recordUnlockEvent(input: UnlockEventRecord): Promise<void>
     decisionReason: input.decisionReason,
     eventName: input.eventName,
     processedAt: input.processedAt
+  });
+}
+
+export async function recordAuditLog(input: {
+  capsuleId?: string;
+  userId?: string;
+  action: string;
+  category: string;
+  status?: string;
+  details?: Record<string, unknown>;
+}): Promise<void> {
+  await auditLogsCollection().insertOne({
+    _id: new ObjectId(),
+    capsuleId: input.capsuleId,
+    userId: input.userId,
+    action: input.action,
+    category: input.category,
+    status: input.status,
+    details: input.details,
+    createdAt: new Date().toISOString()
   });
 }
 

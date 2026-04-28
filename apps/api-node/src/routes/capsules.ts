@@ -19,6 +19,7 @@ import { findUserById } from "../services/repository.js";
 import { verifyAccessToken } from "../services/tokens.js";
 import { processUnlockDecision } from "../services/unlockOrchestrator.js";
 import { hashPassword } from "../services/security.js";
+import type { CapsuleStatus } from "../services/repository.js";
 
 const router = Router();
 
@@ -63,15 +64,22 @@ function parseUnlockEventRule(value: unknown): UnlockEventRule | undefined {
   return parsed;
 }
 
-async function toCapsuleResponse(capsule: {
+export async function toCapsuleResponse(capsule: {
   id: string;
   userId: string;
+  type?: "personal" | "wish";
   title: string;
   encryptedPayload: string;
-    mediaUrl?: string;
-  status: "draft" | "locked" | "released";
+  mediaUrl?: string;
+  status: "draft" | "locked" | "released" | "scheduled_for_delivery" | "sent" | "pending_approval";
   unlockAt?: string;
   unlockEventRules?: UnlockEventRule;
+  recipient?: { name: string; email: string; dob?: string };
+  occasionType?: "birthday" | "anniversary" | "graduation" | "custom";
+  deliveryMode?: "auto" | "manual_approval";
+  emailTemplateId?: string;
+  scheduledAt?: string;
+  sentAt?: string;
   sentimentScore?: number;
   dominantEmotion?: string;
   emotionLabels?: string[];
@@ -80,15 +88,23 @@ async function toCapsuleResponse(capsule: {
   updatedAt: string;
 }) {
   const body = capsule.status === "released" ? await decryptCapsulePayload(capsule.encryptedPayload) : null;
+  const wishBody = capsule.type === "wish" ? await decryptCapsulePayload(capsule.encryptedPayload) : null;
   return {
     id: capsule.id,
     userId: capsule.userId,
+    type: capsule.type || "personal",
     title: capsule.title,
-    body,
+    body: capsule.type === "wish" ? wishBody : body,
     mediaUrl: capsule.mediaUrl,
     status: capsule.status,
     unlockAt: capsule.unlockAt,
     unlockEventRules: capsule.unlockEventRules,
+    recipient: capsule.recipient,
+    occasionType: capsule.occasionType,
+    deliveryMode: capsule.deliveryMode,
+    emailTemplateId: capsule.emailTemplateId,
+    scheduledAt: capsule.scheduledAt,
+    sentAt: capsule.sentAt,
     sentimentScore: capsule.sentimentScore,
     dominantEmotion: capsule.dominantEmotion,
     emotionLabels: capsule.emotionLabels,
@@ -99,7 +115,7 @@ async function toCapsuleResponse(capsule: {
 }
 
 function isCapsuleOverdue(capsule: {
-  status: "draft" | "locked" | "released";
+  status: CapsuleStatus;
   unlockAt?: string;
 }): boolean {
   if (capsule.status !== "locked" || !capsule.unlockAt) {
@@ -116,7 +132,7 @@ async function refreshOverdueCapsuleState(capsule: {
   title: string;
   encryptedPayload: string;
   mediaUrl?: string;
-  status: "draft" | "locked" | "released";
+  status: CapsuleStatus;
   unlockAt?: string;
   unlockEventRules?: UnlockEventRule;
   sentimentScore?: number;

@@ -2,6 +2,7 @@ import { redis } from "./db.js";
 
 const AI_QUEUE = "queue:ai-analysis";
 const SCHEDULED_UNLOCKS = "queue:scheduled-unlocks";
+const SCHEDULED_WISHES = "queue:scheduled-wishes";
 const EVENT_TRIGGER_CAPSULES = "queue:event-trigger-capsules";
 
 export async function enqueueAiAnalysis(capsuleId: string): Promise<void> {
@@ -22,6 +23,31 @@ export async function scheduleUnlock(capsuleId: string, unlockAt: string): Promi
     score,
     value: capsuleId
   });
+}
+
+export async function scheduleWish(capsuleId: string, sendAt: string): Promise<void> {
+  const score = Date.parse(sendAt);
+  if (Number.isNaN(score)) {
+    throw new Error("Invalid sendAt timestamp");
+  }
+
+  await redis().zAdd(SCHEDULED_WISHES, {
+    score,
+    value: capsuleId
+  });
+}
+
+export async function getDueWishCapsules(limit = 100): Promise<string[]> {
+  return redis().zRangeByScore(SCHEDULED_WISHES, 0, Date.now(), {
+    LIMIT: {
+      offset: 0,
+      count: limit
+    }
+  });
+}
+
+export async function ackScheduledWish(capsuleId: string): Promise<void> {
+  await redis().zRem(SCHEDULED_WISHES, capsuleId);
 }
 
 export async function getDueUnlockCapsules(limit = 20): Promise<string[]> {

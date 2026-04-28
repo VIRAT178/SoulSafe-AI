@@ -3,6 +3,8 @@ import express from "express";
 import aiRoutes from "./routes/ai.js";
 import authRoutes from "./routes/auth.js";
 import capsuleRoutes from "./routes/capsules.js";
+import internalRoutes from "./routes/internal.js";
+import wishCapsuleRoutes from "./routes/wishCapsules.js";
 
 export function createApp() {
   const app = express();
@@ -19,6 +21,8 @@ export function createApp() {
   app.use("/auth", authRoutes);
   app.use("/ai", aiRoutes);
   app.use("/capsules", capsuleRoutes);
+  app.use("/wish-capsules", wishCapsuleRoutes);
+  app.use("/internal", internalRoutes);
 
   app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
     const payloadTooLarge = typeof err === "object" && err !== null && "type" in err

@@ -19,11 +19,12 @@ export type UserDoc = {
 export type CapsuleDoc = {
   _id: ObjectId;
   userId: string;
+  type?: "personal" | "wish";
   title: string;
   encryptedPayload: string;
   encryptionMethod: string;
   mediaUrl?: string;
-  status: "draft" | "locked" | "released";
+  status: "draft" | "locked" | "released" | "scheduled_for_delivery" | "sent" | "pending_approval";
   unlockAt?: string;
   unlockEventRules?: {
     type: "birthday" | "exam" | "breakup" | "custom";
@@ -34,6 +35,16 @@ export type CapsuleDoc = {
     };
   };
   unlockKeyHash?: string;
+  recipient?: {
+    name: string;
+    email: string;
+    dob?: string;
+  };
+  occasionType?: "birthday" | "anniversary" | "graduation" | "custom";
+  deliveryMode?: "auto" | "manual_approval";
+  emailTemplateId?: string;
+  scheduledAt?: string;
+  sentAt?: string;
   sentimentScore?: number;
   dominantEmotion?: string;
   emotionLabels?: string[];
@@ -65,6 +76,17 @@ export type UnlockEventDoc = {
   decisionReason: string;
   eventName?: string;
   processedAt: string;
+};
+
+export type AuditLogDoc = {
+  _id: ObjectId;
+  capsuleId?: string;
+  userId?: string;
+  action: string;
+  category: string;
+  status?: string;
+  details?: Record<string, unknown>;
+  createdAt: string;
 };
 
 const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/soulsafe";
@@ -101,6 +123,10 @@ export function aiAnalysesCollection() {
 
 export function unlockEventsCollection() {
   return mongoClient.db().collection<UnlockEventDoc>("unlock_events");
+}
+
+export function auditLogsCollection() {
+  return mongoClient.db().collection<AuditLogDoc>("audit_logs");
 }
 
 export function redis(): RedisClientType {

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { listAiTimeline } from "../services/repository.js";
 import { verifyAccessToken } from "../services/tokens.js";
+import { enhanceWishMessage } from "../services/aiEnhancementService.js";
 
 const router = Router();
 
@@ -23,6 +24,33 @@ router.get("/timeline/:userId", async (req, res) => {
     return res.json(timeline);
   } catch (error) {
     return res.status(401).json({ error: (error as Error).message });
+  }
+});
+
+router.post("/enhance-message", async (req, res) => {
+  try {
+    const { recipientName, occasionType, message } = req.body;
+
+    if (!recipientName || !occasionType || !message) {
+      return res.status(400).json({
+        error: "Missing required fields",
+        required: ["recipientName", "occasionType", "message"],
+      });
+    }
+
+    const suggestions = await enhanceWishMessage({
+      recipientName,
+      occasionType,
+      message,
+    });
+
+    return res.json(suggestions);
+  } catch (error) {
+    console.error("Error enhancing message:", error);
+    return res.status(500).json({
+      error: "Failed to enhance message",
+      message: (error as Error).message,
+    });
   }
 });
 

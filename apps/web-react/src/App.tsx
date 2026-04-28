@@ -1,6 +1,7 @@
 import { FormEvent, type ChangeEvent, createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import EmotionTimeline, { type EmotionTimelinePoint } from "./components/EmotionTimeline";
+import { MessageSuggestions } from "./components/MessageSuggestions";
 
 type UnlockEventRule = {
   type: "birthday" | "exam" | "breakup" | "custom";
@@ -13,17 +14,28 @@ type UnlockEventRule = {
 
 type Capsule = {
   id: string;
+  type: "personal" | "wish";
   title: string;
   body: string | null;
   createdAt: string;
   mediaUrl?: string;
   unlockAt?: string;
   unlockEventRules?: UnlockEventRule;
-  status: "draft" | "locked" | "released";
+  status: "draft" | "locked" | "released" | "scheduled_for_delivery" | "sent" | "pending_approval";
   dominantEmotion?: string;
   analyzedAt?: string;
   emotionLabels?: string[];
   sentimentScore?: number;
+  recipient?: {
+    name: string;
+    email: string;
+    dob?: string;
+  };
+  occasionType?: "birthday" | "anniversary" | "graduation" | "custom";
+  deliveryMode?: "auto" | "manual_approval";
+  emailTemplateId?: string;
+  scheduledAt?: string;
+  sentAt?: string;
 };
 
 type UserProfile = {
@@ -67,6 +79,7 @@ type AppContextValue = {
   loading: boolean;
   error: string | null;
   clearError: () => void;
+  refreshCapsules: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   startRegister: (payload: {
     fullName: string;
@@ -222,6 +235,14 @@ function App() {
   async function loadCapsules(accessToken: string): Promise<void> {
     const data = await request<Capsule[]>("/capsules", {}, accessToken);
     setCapsules(data);
+  }
+
+  async function refreshCapsules(): Promise<void> {
+    if (!token) {
+      return;
+    }
+
+    await loadCapsules(token);
   }
 
   function clearError() {
@@ -547,6 +568,7 @@ function App() {
       loading,
       error,
       clearError,
+      refreshCapsules,
       login,
       startRegister,
       verifyRegistrationOtp,
@@ -573,6 +595,18 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+        <Route
+          path="/wish-capsules"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<WishSchedulerPage />} />
+          <Route path=":wishCapsuleId" element={<WishSchedulerPage />} />
+        </Route>
 
         <Route
           path="/dashboard"
@@ -1106,6 +1140,7 @@ function DashboardLayout() {
     { label: "Capsule Service", to: "/dashboard/services/capsules" },
     { label: "AI Insights", to: "/dashboard/services/ai" },
     { label: "Recommendations", to: "/dashboard/services/recommendations" },
+    { label: "Wish Scheduler", to: "/wish-capsules" },
     { label: "About", to: "/about" }
   ];
 
@@ -2088,6 +2123,447 @@ function CapsuleDetailPage() {
         <h4>Why you're seeing this</h4>
         <p>{unlockReason || "This capsule has not been unlocked by recommendation flow yet."}</p>
       </article>
+    </section>
+  );
+}
+
+function WishSchedulerPage() {
+  const { wishCapsuleId } = useParams<{ wishCapsuleId: string }>();
+  const navigate = useNavigate();
+  const { capsules, token, user, refreshCapsules } = useAppContext();
+  const wishCapsules = useMemo(
+    () => capsules.filter((capsule) => capsule.type === "wish").sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [capsules]
+  );
+  const activeCapsule = wishCapsules.find((capsule) => capsule.id === wishCapsuleId) || null;
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  type WishCapsulePageState = {
+    occasionType: "birthday" | "anniversary" | "graduation" | "custom";
+    deliveryMode: "auto" | "manual_approval";
+  };
+  function getInitialWishForm() {
+    return {
+      title: "",
+      recipientName: "",
+      recipientEmail: "",
+      recipientDob: "",
+      occasionType: "birthday" as WishCapsulePageState["occasionType"],
+      scheduledAt: toLocalDateTimeValue(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+      message: "",
+      emailTemplateId: "birthday",
+      deliveryMode: "auto" as WishCapsulePageState["deliveryMode"]
+    };
+  }
+
+  const [form, setForm] = useState(getInitialWishForm);
+
+  function buildBirthdaySchedule(dob: string): string {
+    const parsedDob = new Date(dob);
+    if (Number.isNaN(parsedDob.getTime())) {
+      return form.scheduledAt;
+    }
+
+    const now = new Date();
+    let target = new Date(now.getFullYear(), parsedDob.getMonth(), parsedDob.getDate(), 9, 0, 0, 0);
+    if (target.getTime() < now.getTime()) {
+      target = new Date(now.getFullYear() + 1, parsedDob.getMonth(), parsedDob.getDate(), 9, 0, 0, 0);
+    }
+
+    return toLocalDateTimeValue(target);
+  }
+
+  function populateFormFromCapsule(capsule: Capsule | null): void {
+    if (!capsule) {
+      setForm(getInitialWishForm());
+      return;
+    }
+
+    const recipientDob = capsule.recipient?.dob ? new Date(capsule.recipient.dob) : null;
+    setForm({
+      title: capsule.title,
+      recipientName: capsule.recipient?.name || "",
+      recipientEmail: capsule.recipient?.email || "",
+      recipientDob: recipientDob && !Number.isNaN(recipientDob.getTime()) ? recipientDob.toISOString().slice(0, 10) : "",
+      occasionType: capsule.occasionType || "birthday",
+      scheduledAt: capsule.scheduledAt ? toLocalDateTimeValue(new Date(capsule.scheduledAt)) : toLocalDateTimeValue(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+      message: capsule.body || "",
+      emailTemplateId: capsule.emailTemplateId || capsule.occasionType || "birthday",
+      deliveryMode: capsule.deliveryMode || "auto"
+    });
+  }
+
+  useEffect(() => {
+    populateFormFromCapsule(activeCapsule);
+    setLocalError(null);
+  }, [activeCapsule?.id]);
+
+  useEffect(() => {
+    if (form.occasionType !== "birthday" || !form.recipientDob) {
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      scheduledAt: buildBirthdaySchedule(current.recipientDob)
+    }));
+  }, [form.recipientDob, form.occasionType]);
+
+  const isEditing = Boolean(activeCapsule);
+  const selectedTemplateLabel = form.emailTemplateId || form.occasionType;
+
+  async function saveWishCapsule(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!token) {
+      return;
+    }
+
+    setBusyId("save");
+    setLocalError(null);
+
+    try {
+      const payload = {
+        title: form.title.trim() || `Wish for ${form.recipientName.trim()}`,
+        message: form.message,
+        recipient: {
+          name: form.recipientName,
+          email: form.recipientEmail,
+          dob: form.recipientDob ? new Date(form.recipientDob).toISOString() : undefined
+        },
+        occasionType: form.occasionType,
+        deliveryMode: form.deliveryMode,
+        emailTemplateId: selectedTemplateLabel,
+        scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : undefined
+      };
+
+      if (isEditing && activeCapsule) {
+        await request(`/wish-capsules/${activeCapsule.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload)
+        }, token);
+      } else {
+        await request("/wish-capsules", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        }, token);
+
+        setForm(getInitialWishForm());
+      }
+
+      await refreshCapsules();
+      navigate("/wish-capsules");
+    } catch (error) {
+      setLocalError((error as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function runWishAction(capsuleId: string, action: "send-now" | "approve" | "delete") {
+    if (!token) {
+      return;
+    }
+
+    setBusyId(capsuleId);
+    setLocalError(null);
+
+    try {
+      if (action === "delete") {
+        await request(`/wish-capsules/${capsuleId}`, { method: "DELETE" }, token);
+      } else {
+        await request(`/wish-capsules/${capsuleId}/${action}`, { method: "POST" }, token);
+      }
+
+      await refreshCapsules();
+      if (wishCapsuleId === capsuleId && action === "delete") {
+        navigate("/wish-capsules");
+      }
+    } catch (error) {
+      setLocalError((error as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <section className="service-page wish-scheduler-page wish-scheduler-premium">
+      <div className="wish-scheduler-shell">
+        <header className="wish-scheduler-hero">
+          <div className="wish-scheduler-headline">
+            <p className="hero-kicker">Wish Scheduler</p>
+            <h3>Schedule messages for birthdays, anniversaries, graduations, and custom moments.</h3>
+            <p>Create, review, edit, and send wish capsules from one dedicated workspace.</p>
+          </div>
+
+          <div className="wish-scheduler-kpis" role="list" aria-label="Wish scheduler key metrics">
+            <article className="wish-scheduler-kpi" role="listitem">
+              <span>Total</span>
+              <strong>{wishCapsules.length}</strong>
+              <small>Wish capsules</small>
+            </article>
+            <article className="wish-scheduler-kpi" role="listitem">
+              <span>Pending approval</span>
+              <strong>{wishCapsules.filter((capsule) => capsule.status === "pending_approval").length}</strong>
+              <small>Approval queue</small>
+            </article>
+            <article className="wish-scheduler-kpi" role="listitem">
+              <span>Scheduled</span>
+              <strong>{wishCapsules.filter((capsule) => capsule.status === "scheduled_for_delivery").length}</strong>
+              <small>Auto delivery</small>
+            </article>
+            <article className="wish-scheduler-kpi" role="listitem">
+              <span>Sent</span>
+              <strong>{wishCapsules.filter((capsule) => capsule.status === "sent").length}</strong>
+              <small>Delivered wishes</small>
+            </article>
+          </div>
+        </header>
+
+        <div className="wish-scheduler-layout">
+          <article className="wish-scheduler-form-card">
+            <div className="wish-scheduler-card-head">
+              <h4>{isEditing ? "Edit wish capsule" : "Create wish capsule"}</h4>
+              <span>{isEditing ? "Update the scheduled wish" : "Auto delivery or approval"}</span>
+            </div>
+
+            <form className="panel-form wish-form wish-form-premium" onSubmit={saveWishCapsule}>
+              <div className="wish-form-grid">
+                <label>
+                  Occasion type
+                  <select
+                    value={form.occasionType}
+                    onChange={(event) => setForm((current) => ({ ...current, occasionType: event.target.value as WishCapsulePageState["occasionType"], emailTemplateId: event.target.value }))}
+                    required
+                  >
+                    <option value="birthday">Birthday</option>
+                    <option value="anniversary">Anniversary</option>
+                    <option value="graduation">Graduation</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </label>
+
+                <label>
+                  Recipient name
+                  <input value={form.recipientName} onChange={(event) => setForm((current) => ({ ...current, recipientName: event.target.value }))} required />
+                </label>
+
+                <label>
+                  Recipient email
+                  <input type="email" value={form.recipientEmail} onChange={(event) => setForm((current) => ({ ...current, recipientEmail: event.target.value }))} required />
+                </label>
+
+                <label>
+                  Date and time
+                  <input type="datetime-local" value={form.scheduledAt} onChange={(event) => setForm((current) => ({ ...current, scheduledAt: event.target.value }))} required />
+                </label>
+
+                <label>
+                  Optional DOB
+                  <input
+                    type="date"
+                    value={form.recipientDob}
+                    onChange={(event) => {
+                      const nextDob = event.target.value;
+                      setForm((current) => ({
+                        ...current,
+                        recipientDob: nextDob,
+                        scheduledAt: current.occasionType === "birthday" && nextDob ? buildBirthdaySchedule(nextDob) : current.scheduledAt
+                      }));
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Template selector
+                  <select value={form.emailTemplateId} onChange={(event) => setForm((current) => ({ ...current, emailTemplateId: event.target.value }))}>
+                    <option value="birthday">Birthday template</option>
+                    <option value="anniversary">Anniversary template</option>
+                    <option value="graduation">Graduation template</option>
+                    <option value="custom">Custom template</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="wish-delivery-toggle" role="group" aria-label="Delivery mode">
+                <button type="button" className={form.deliveryMode === "auto" ? "wish-delivery-btn active" : "wish-delivery-btn"} onClick={() => setForm((current) => ({ ...current, deliveryMode: "auto" }))}>
+                  Auto send
+                </button>
+                <button type="button" className={form.deliveryMode === "manual_approval" ? "wish-delivery-btn active" : "wish-delivery-btn"} onClick={() => setForm((current) => ({ ...current, deliveryMode: "manual_approval" }))}>
+                  Notify me first
+                </button>
+              </div>
+
+              <label className="wish-message-field">
+                Message
+                <textarea value={form.message} onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))} required placeholder="Write the wish you want to send." />
+              </label>
+
+              <MessageSuggestions
+                recipientName={form.recipientName}
+                occasionType={form.occasionType}
+                originalMessage={form.message}
+                token={token}
+                onSelectSuggestion={(body) => setForm((current) => ({ ...current, message: body }))}
+              />
+
+              <div className="wish-preview-card" aria-label="Template preview">
+                <p className="wish-preview-kicker">Template preview</p>
+                <h5>{selectedTemplateLabel} preview</h5>
+                <p className="wish-preview-recipient">For {form.recipientName || "Recipient Name"}</p>
+                <div className="wish-preview-message">{form.message || "Your message will appear here."}</div>
+                <p className="wish-preview-footer">This message was scheduled via SoulSafe AI by {user?.fullName || user?.email || "you"}.</p>
+              </div>
+
+              <div className="wish-form-footer">
+                <p className="wish-analysis-note">Wish capsules are stored in the same capsule vault and routed through the existing scheduler system.</p>
+                <button className="btn btn-primary wish-submit-btn" disabled={busyId === "save" || !form.recipientName || !form.recipientEmail || !form.message}>
+                  {busyId === "save" ? (isEditing ? "Updating..." : "Saving...") : isEditing ? "Update Wish" : "Create Wish"}
+                </button>
+              </div>
+            </form>
+
+            {localError ? <p className="error-text">{localError}</p> : null}
+          </article>
+
+          <div className="wish-scheduler-vault-column">
+            <article className="wish-scheduler-list-card">
+              <div className="wish-scheduler-card-head">
+                <h4>Scheduled wishes</h4>
+                <span>{wishCapsules.length} total entries</span>
+              </div>
+
+              <div className="table-card wish-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Recipient</th>
+                      <th>Occasion</th>
+                      <th>Scheduled date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wishCapsules.map((capsule) => (
+                      <tr key={capsule.id} className={wishCapsuleId === capsule.id ? "is-active" : ""}>
+                        <td>
+                          <strong>{capsule.recipient?.name || capsule.title}</strong>
+                          <div className="wish-row-subtext">{capsule.recipient?.email || "No email"}</div>
+                        </td>
+                        <td>{capsule.occasionType || "custom"}</td>
+                        <td>{capsule.scheduledAt ? new Date(capsule.scheduledAt).toLocaleString() : "Not scheduled"}</td>
+                        <td><span className={`pill ${capsule.status}`}>{capsule.status === "scheduled_for_delivery" ? "scheduled" : capsule.status === "pending_approval" ? "pending approval" : capsule.status}</span></td>
+                        <td>
+                          <div className="wish-row-actions">
+                            <Link to={`/wish-capsules/${capsule.id}`} className="btn btn-primary wish-detail-link">
+                              View
+                            </Link>
+                            <button type="button" className="inline-btn" onClick={() => navigate(`/wish-capsules/${capsule.id}`)}>
+                              Edit
+                            </button>
+                            <button type="button" className="inline-btn" onClick={() => runWishAction(capsule.id, "send-now")} disabled={busyId === capsule.id || capsule.status === "sent"}>
+                              Send Now
+                            </button>
+                            {capsule.deliveryMode === "manual_approval" ? (
+                              <button type="button" className="inline-btn" onClick={() => runWishAction(capsule.id, "approve")} disabled={busyId === capsule.id || capsule.status === "sent"}>
+                                Approve
+                              </button>
+                            ) : null}
+                            <button type="button" className="inline-btn" onClick={() => runWishAction(capsule.id, "delete")} disabled={busyId === capsule.id}>
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="wish-mobile-list" aria-label="Wish list mobile view">
+                {wishCapsules.map((capsule) => (
+                  <article key={`wish-mobile-${capsule.id}`} className="wish-mobile-item">
+                    <div className="wish-mobile-item-head">
+                      <h5>{capsule.recipient?.name || capsule.title}</h5>
+                      <span className={`pill ${capsule.status}`}>{capsule.status === "scheduled_for_delivery" ? "scheduled" : capsule.status === "pending_approval" ? "pending approval" : capsule.status}</span>
+                    </div>
+                    <p><strong>Occasion:</strong> {capsule.occasionType || "custom"}</p>
+                    <p><strong>Scheduled:</strong> {capsule.scheduledAt ? new Date(capsule.scheduledAt).toLocaleString() : "Not scheduled"}</p>
+                    <p><strong>Message:</strong> {capsule.body || "No message"}</p>
+                    <div className="wish-row-actions">
+                      <Link to={`/wish-capsules/${capsule.id}`} className="btn btn-primary wish-detail-link">
+                        View
+                      </Link>
+                      <button type="button" className="inline-btn" onClick={() => runWishAction(capsule.id, "send-now")} disabled={busyId === capsule.id || capsule.status === "sent"}>
+                        Send Now
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </article>
+
+            <article className="wish-scheduler-insights-card" aria-label="Wish capsule details">
+              <div className="wish-scheduler-card-head">
+                <h4>Wish capsule detail</h4>
+                <span>{activeCapsule ? "Selected wish" : "No wish selected"}</span>
+              </div>
+
+              {activeCapsule ? (
+                <div className="wish-detail-stack">
+                  <dl className="wish-detail-grid">
+                    <div>
+                      <dt>Recipient</dt>
+                      <dd>{activeCapsule.recipient?.name || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Email</dt>
+                      <dd>{activeCapsule.recipient?.email || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>Occasion</dt>
+                      <dd>{activeCapsule.occasionType || "custom"}</dd>
+                    </div>
+                    <div>
+                      <dt>Delivery</dt>
+                      <dd>{activeCapsule.deliveryMode || "auto"}</dd>
+                    </div>
+                    <div>
+                      <dt>Scheduled</dt>
+                      <dd>{activeCapsule.scheduledAt ? new Date(activeCapsule.scheduledAt).toLocaleString() : "Not scheduled"}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd><span className={`pill ${activeCapsule.status}`}>{activeCapsule.status === "scheduled_for_delivery" ? "scheduled" : activeCapsule.status === "pending_approval" ? "pending approval" : activeCapsule.status}</span></dd>
+                    </div>
+                  </dl>
+
+                  <div className="wish-detail-message">
+                    <h5>Message</h5>
+                    <p>{activeCapsule.body || "No message available."}</p>
+                  </div>
+
+                  <div className="wish-row-actions">
+                    <button type="button" className="inline-btn" onClick={() => runWishAction(activeCapsule.id, "send-now")} disabled={busyId === activeCapsule.id || activeCapsule.status === "sent"}>
+                      Send Now
+                    </button>
+                    {activeCapsule.deliveryMode === "manual_approval" ? (
+                      <button type="button" className="inline-btn" onClick={() => runWishAction(activeCapsule.id, "approve")} disabled={busyId === activeCapsule.id || activeCapsule.status === "sent"}>
+                        Approve
+                      </button>
+                    ) : null}
+                    <button type="button" className="inline-btn" onClick={() => runWishAction(activeCapsule.id, "delete")} disabled={busyId === activeCapsule.id}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="wish-detail-empty">Pick a wish capsule from the list to inspect the recipient, message, and delivery settings.</p>
+              )}
+            </article>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

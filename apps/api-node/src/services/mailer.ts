@@ -234,3 +234,32 @@ export async function sendCapsuleOpenedEmail(input: {
     html
   });
 }
+
+export async function sendWishDeliveredEmail(input: {
+  email: string;
+  fullName: string;
+  recipientName: string;
+  scheduledAt?: string;
+  sentAt?: string;
+  title?: string;
+}): Promise<void> {
+  const sentAt = input.sentAt || new Date().toISOString();
+  const scheduledLine = input.scheduledAt ? `<p><strong>Scheduled for:</strong> ${input.scheduledAt}</p>` : "";
+  const titleLine = input.title ? `<p><strong>Title:</strong> ${input.title}</p>` : "";
+  const html = emailLayout(
+    "Your wish was delivered",
+    `<p>Hi ${input.fullName},</p>
+     <p>Your scheduled wish to <strong>${input.recipientName}</strong> was delivered successfully.</p>
+     ${titleLine}
+     ${scheduledLine}
+     <p><strong>Delivered at:</strong> ${sentAt}</p>`,
+    "#0f766e"
+  );
+
+  await sendEmail({
+    to: input.email,
+    subject: "Your wish was delivered",
+    html,
+    text: `Hi ${input.fullName}, your scheduled wish to ${input.recipientName} was delivered at ${sentAt}.`
+  });
+}
